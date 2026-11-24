@@ -71,6 +71,6 @@ export async function GET() {
     settings: { school: st.school, region: st.region, teacher: st.teacher, subject: st.subject, grade: st.grade, term: st.term, year: st.year, logo: st.logo, logo2: st.logo2, pfont: st.pfont, gap: st.gap },
     schoolId: school, subjects: [], skills: full.skills, bank: [], roster: [meRow], tests: outTests, imps: outImps,
     acks: mine.acks[me] ? { [me]: mine.acks[me] } : {}, sheets: mine.sheets, sheetPages: mine.sheetPages, qimg, behavior: [],
-    stars: { s: { [me]: meRow ? full.stars.s[me] || 0 : 0 }, g: {} }, gapPre,
+    stars: { s: { [me]: meRow ? full.stars.s[me] || 0 : 0 }, g: {} }, gapPre, tasks: mine.tasks,
   });
 }

@@ -54,7 +54,7 @@ begin
       'of', jsonb_array_length(r->'items'));
   elsif tg_table_name = 'perf_tasks' then
     tid := r->>'test_id';
-    d := jsonb_build_object('title', r->>'title', 'from', o->'teacher_grade', 'to', n->'teacher_grade');
+    d := jsonb_build_object('title', r->>'title', 'from', o->'teacher_grade', 'to', n->'teacher_grade', 'status', n->>'status', 'set', r->>'set_id');
   elsif tg_table_name = 'sheets' then
     tid := null;
     d := jsonb_build_object('key', r->>'key', 'sent', n->>'sent_at' is not null, 'file', (n->>'storage_path') is distinct from (o->>'storage_path'));

@@ -6,7 +6,7 @@
  */
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import {
-  ackToRows, behaviorToRows, groupsToRows, impToRows, qimgToRows, questionsToRows, rosterToRows, rowsToState, settingsToRows, sheetsToRows,
+  ackToRows, taskSetToRows, taskRowIdOf, behaviorToRows, groupsToRows, impToRows, qimgToRows, questionsToRows, rosterToRows, rowsToState, settingsToRows, sheetsToRows,
   skillsToRows, subjectsToRows, testToRows, type Own, type Row,
 } from "@/lib/data/mapping";
 
@@ -30,8 +30,9 @@ async function upsert(sb: any, table: string, rows: Row[], onConflict: string) {
   for (const c of chunks(rows)) if (c.length) check(await sb.from(table).upsert(c, { onConflict }));
 }
 /** Deletes rows of `table` in scope whose key is not in `keep`. */
-async function prune(sb: any, table: string, scope: Record<string, string>, keyCol: string, keep: string[]) {
+async function prune(sb: any, table: string, scope: Record<string, string>, keyCol: string, keep: string[], only?: (q: any) => any) {
   let q = sb.from(table).delete();
+  if (only) q = only(q);
   for (const [k, v] of Object.entries(scope)) q = q.eq(k, v);
   if (keep.length) q = q.not(keyCol, "in", `(${keep.map((k) => `"${String(k).replace(/"/g, '""')}"`).join(",")})`);
   check(await q);
@@ -138,6 +139,16 @@ export function createStore() {
         return prune(sb, "sheets", { teacher_id: own.teacher_id, key }, "student_id", rows.map((r) => r.student_id));
       }
       case "acks": return teacherAck(id, data);
+      case "tasks": { // a performance task for a group or a student: one row per student
+        const rows = taskSetToRows(data, own);
+        await upsert(sb, "perf_tasks", rows, "id");
+        return prune(sb, "perf_tasks", { set_id: data.id }, "student_id", rows.map((r) => r.student_id));
+      }
+      case "taskgrade": { // the teacher's decision on one student's work: mastered, or try again
+        const [setId, sid] = id.split("/");
+        check(await sb.from("perf_tasks").update({ status: data.status, teacher_grade: data.tg ?? null, teacher_note: data.tnote || null, decided_at: new Date().toISOString() }).eq("id", taskRowIdOf(setId, sid)));
+        return;
+      }
       case "behavior": {
         const seen = (bid: string) => { for (const a of Object.values(live().acks || {}) as S[]) { const b = (a.beh || []).find((x: S) => x.id === bid); if (b) return b.seen || null; } return null; };
         const rows = behaviorToRows(data.list, own, seen);
@@ -165,7 +176,7 @@ export function createStore() {
     await upsert(sb, "sends", r.sends, "student_id,test_id");
     await prune(sb, "sends", { student_id: sid }, "test_id", r.sends.map((x) => x.test_id));
     await upsert(sb, "perf_tasks", r.perf_tasks.map(({ ai_eval, ...t }) => t), "student_id,test_id"); // the AI evaluation is written by the server
-    await prune(sb, "perf_tasks", { student_id: sid }, "test_id", r.perf_tasks.map((x) => x.test_id));
+    await prune(sb, "perf_tasks", { student_id: sid }, "test_id", r.perf_tasks.map((x) => x.test_id), (q) => q.is("set_id", null)); // never touches group/mastery tasks
     for (const [key, at] of Object.entries(r.sheetSent)) check(await sb.from("sheets").update({ sent_at: at }).eq("student_id", sid).eq("key", key));
     // sheets that were withdrawn
     const { data: sent } = await sb.from("sheets").select("key").eq("student_id", sid).not("sent_at", "is", null);
@@ -207,8 +218,10 @@ export function createStore() {
     if (kind === "tests") check(await sb.from("tests").delete().eq("id", id));
     else if (kind === "improve") check(await sb.from("improvement_rounds").delete().eq("id", id));
     else if (kind === "qimg") check(await sb.from("qimg").delete().eq("id", id));
+    else if (kind === "tasks") check(await sb.from("perf_tasks").delete().eq("set_id", id));
     else if (kind === "acks") {
-      for (const t of ["acks", "notes", "sends", "perf_tasks"]) check(await sb.from(t).delete().eq("student_id", id));
+      for (const t of ["acks", "notes", "sends"]) check(await sb.from(t).delete().eq("student_id", id));
+      check(await sb.from("perf_tasks").delete().eq("student_id", id).is("set_id", null));
       check(await sb.from("sheets").update({ sent_at: null }).eq("student_id", id));
     }
   }

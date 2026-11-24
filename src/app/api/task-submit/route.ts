@@ -17,7 +17,8 @@ export async function POST(req: Request) {
   const frames = form.getAll("frames").filter((f): f is File => f instanceof File).slice(0, 10);
   // the task must be hers and not graded yet (read with her own session: RLS)
   const { data: task } = await c.sb.from("perf_tasks").select("*").eq("id", meta.taskId).eq("student_id", c.sid).maybeSingle();
-  if (!task || task.teacher_grade != null) return fail("invalid_argument", 400);
+  // a task tied to a test closes once graded; a mastery task stays open until the teacher confirms mastery
+  if (!task || (task.set_id ? task.status === "mastered" : task.teacher_grade != null)) return fail("invalid_argument", 400);
   const admin = supabaseAdmin();
   if (!(await underQuota(admin, "student_id", c.sid, 12))) return fail("rate_limited", 429);
   const { data: skills } = await admin.from("skills").select("id, name").in("id", task.skills?.length ? task.skills : ["-"]);
@@ -43,12 +44,14 @@ export async function POST(req: Request) {
   const sub = meta.sub || {};
   const at = String(sub.at || new Date().toISOString());
   const { error } = await admin.from("task_submissions").insert({
-    id: subIdOf(c.sid, task.test_id, at), task_id: task.id, student_id: c.sid, school_id: task.school_id, kind: ["img", "pdf", "vid"].includes(sub.kind) ? sub.kind : "img",
+    id: subIdOf(c.sid, task.test_id || task.set_id, at), task_id: task.id, student_id: c.sid, school_id: task.school_id, kind: ["img", "pdf", "vid"].includes(sub.kind) ? sub.kind : "img",
     storage_path: typeof sub.path === "string" && sub.path.includes(`/student/${c.sid}/`) ? sub.path : null,
     thumbs: (Array.isArray(sub.th) ? sub.th : []).filter((t: unknown) => typeof t === "string" && t.startsWith("data:image/jpeg") && t.length < 400000).slice(0, 4),
     name: String(sub.name || "").slice(0, 200), size: +sub.size || null, note, duration: Math.round(dur) || null, submitted_at: at,
   });
   if (error) return fail("server", 500);
-  await admin.from("perf_tasks").update({ ai_eval: ev, teacher_grade: null }).eq("id", task.id);
+  await admin.from("perf_tasks").update(task.set_id
+    ? { ai_eval: ev, teacher_grade: null, status: "submitted", attempts: (task.attempts || 0) + 1 }
+    : { ai_eval: ev, teacher_grade: null }).eq("id", task.id);
   return json({ ev });
 }

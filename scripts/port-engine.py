@@ -286,7 +286,11 @@ sub("""    const bySkill = {}; pool.forEach((q) => (bySkill[q.skill] = bySkill[q
     if (S.ui.bPref !== false) { const bs = bankQuality(); Object.values(bySkill).forEach((l) => l.sort((a, b) => qualityRank(bs[a.id]) - qualityRank(bs[b.id]))); }""")
 
 # 14. the new "quality & accreditation" page (src/engine/ext/*.js run inside boot, after the original code)
-sub("""portal: vPortal }[r] || vHome;""", """portal: vPortal, quality: vQuality }[r] || vHome;""")
+sub("""portal: vPortal }[r] || vHome;""", """portal: vPortal, quality: vQuality, tasks: vTasksM }[r] || vHome;""")
+# 15. performance tasks until mastery: on the student's own page and in the teacher's report
+sub("""${ewStudentCard(S.sid)}<section class="card">""", """${ewStudentCard(S.sid)}${setTasksStudent(S.sid)}<section class="card">""")
+sub("""${ewStudentCard(S.sid)}${behCard(S.sid)}""", """${ewStudentCard(S.sid)}${setTasksStudent(S.sid)}${behCard(S.sid)}""")
+sub("""${taskTeacher(sid, t)}""", """${taskTeacher(sid, t)}${setTasksMini(sid)}""")
 import glob, os
 # libraries are served by the site itself (works offline-tolerant, no third-party script host)
 code = code.replace("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/", "/vendor/")
