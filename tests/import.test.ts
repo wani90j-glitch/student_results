@@ -62,3 +62,32 @@ describe.skipIf(!hasSource())("import", () => {
     expect(sent).toBe(Object.values(ex.acks!).filter((a: any) => a.sheet).length);
   });
 });
+
+describe.skipIf(!hasSource())("round trip", () => {
+  it("database rows turn back into exactly the old app's state", async () => {
+    const { rowsToState } = await import("@/lib/data/mapping");
+    const L = loadLegacy();
+    const ex = syntheticExport(L);
+    const out = transform(ex, { schoolId: SCHOOL, teacherId: TEACHER, pin: () => ({ lookup: "x", hash: "y" }) }).rows as any;
+    const st = rowsToState({ ...out, school: out.schools[0], teacher: out.teachers[0] });
+    expect(st.roster).toEqual(ex.roster.map(({ nid, ...s }) => s));
+    expect(st.skills).toEqual(ex.skills);
+    expect(st.bank).toEqual(ex.bank);
+    expect(st.tests).toEqual(JSON.parse(JSON.stringify(ex.tests)));
+    expect(st.imps).toEqual(JSON.parse(JSON.stringify(ex.improve)));
+    expect(st.qimg).toEqual(ex.qimg);
+    expect(st.behavior).toEqual(ex.behavior!.map((b: any) => ({ ...b, note: b.note || "" })));
+    for (const [sid, a] of Object.entries(ex.acks!) as [string, any][]) {
+      const b = st.acks[sid] || { seen: {}, notes: [] };
+      expect(b.seen, sid).toEqual(a.seen);
+      expect(b.notes, sid).toEqual(a.notes);
+      if (a.sent?.t_main?.paper) expect(b.sent.t_main.paper).toBe(a.sent.t_main.paper);
+      if (a.sent?.t_main?.plan) expect(b.sent.t_main.plan).toEqual(a.sent.t_main.plan);
+      if (a.sheet) expect(b.sheet.t_main.at).toBe(a.sheet.t_main.at);
+      if (a.beh) expect((b.beh || []).map((x: any) => x.seen)).toEqual(a.beh.map((x: any) => x.seen));
+    }
+    expect(Object.keys(st.sheets.t_main).sort()).toEqual(Object.keys(ex.sheets!.t_main).sort());
+    expect(st.settings.gap).toEqual(ex.settings.gap);
+    expect(st.settings.logo).toBe(ex.settings.logo);
+  });
+});

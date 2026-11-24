@@ -51,12 +51,6 @@ async function allRows(table: string, filter?: [string, string]) {
   }
 }
 
-function decodeDataUri(uri: string) {
-  const m = /^data:([^;,]+)(;base64)?,(.*)$/s.exec(uri);
-  if (!m) return null;
-  return { type: m[1], body: m[2] ? Buffer.from(m[3], "base64") : Buffer.from(decodeURIComponent(m[3])) };
-}
-
 async function main() {
   const ex: ExportFile = JSON.parse(fs.readFileSync(file!, "utf8"));
   if (!Array.isArray(ex.roster) || !ex.tests) throw new Error("This file is not an Itqan export.");
@@ -80,7 +74,7 @@ async function main() {
     const old = [...existing.values()].find((s) => s.pin_lookup === lookup);
     return { lookup, hash: old?.pin_hash || hashPin(nid) };
   };
-  const { rows, uploads, warnings } = transform(ex, { schoolId, teacherId, pin });
+  const { rows, warnings } = transform(ex, { schoolId, teacherId, pin });
 
   // 3. upsert table by table (parents first)
   for (const [table, key] of TABLE_KEYS) {
@@ -97,17 +91,7 @@ async function main() {
     }
   }
 
-  // 4. images that lived inside the old file (logos, question figures, task thumbnails)
-  let up = 0;
-  for (const u of uploads) {
-    const d = decodeDataUri(u.dataUri);
-    if (!d) continue;
-    const { error } = await sb.storage.from(u.bucket).upload(u.path, d.body, { contentType: d.type, upsert: true });
-    if (error) throw new Error(`upload ${u.bucket}: ${error.message}`);
-    up++;
-  }
-
-  // 5. one sign-in identity per student (no e-mail, no password: she signs in with her PIN through the server)
+  // 4. one sign-in identity per student (no e-mail, no password: she signs in with her PIN through the server)
   let made = 0;
   for (const s of rows.students) {
     if ((s as { auth_user_id?: string }).auth_user_id || existing.get(s.id)?.auth_user_id) continue;
@@ -120,7 +104,7 @@ async function main() {
     made++;
   }
 
-  // 6. report: counts per table
+  // 5. report: counts per table
   console.log("\nTable                 in file   in database");
   for (const [table] of TABLE_KEYS) {
     const col = table === "schools" ? "id" : table === "teachers" ? "id" : "school_id";
@@ -128,10 +112,10 @@ async function main() {
     const { count } = await sb.from(table).select("*", { count: "exact", head: true }).eq(col, val);
     console.log(`${table.padEnd(22)}${String((rows as any)[table].length).padStart(7)}${String(count ?? "?").padStart(14)}`);
   }
-  console.log(`\nFiles uploaded: ${up} · new student sign-in identities: ${made}`);
+  console.log(`\nNew student sign-in identities: ${made}`);
   warnings.forEach((w) => console.log("! " + w));
 
-  // 7. spot-check 3 students: figures read back from the database = figures from the file
+  // 6. spot-check 3 students: figures read back from the database = figures from the file
   const db = fromRows({
     skills: await allRows("skills", ["school_id", schoolId]), students: await allRows("students", ["teacher_id", teacherId]), classes: await allRows("classes", ["teacher_id", teacherId]),
     questions: await allRows("questions", ["teacher_id", teacherId]), tests: await allRows("tests", ["teacher_id", teacherId]), test_results: await allRows("test_results", ["teacher_id", teacherId]),

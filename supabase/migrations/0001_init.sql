@@ -9,8 +9,8 @@ create table public.schools (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   region text,
-  logo_path text,
-  logo2_path text,
+  logo text,   -- small PNG as a data URI (printed in every PDF header, also offline)
+  logo2 text,
   created_at timestamptz not null default now()
 );
 
@@ -82,6 +82,14 @@ create table public.questions (
   adapted boolean not null default false,
   v int,
   sort int not null default 0
+);
+
+-- question figures (small JPEG data URIs, needed offline for printing papers)
+create table public.qimg (
+  id text primary key,
+  school_id uuid not null references public.schools (id),
+  teacher_id uuid not null references public.teachers (id),
+  data text not null
 );
 
 create table public.tests (
@@ -182,7 +190,7 @@ create table public.task_submissions (
   school_id uuid not null references public.schools (id),
   kind text not null check (kind in ('img', 'pdf', 'vid')),
   storage_path text,
-  thumbs text[] not null default '{}',
+  thumbs text[] not null default '{}',  -- up to 4 small JPEG data URIs
   name text, size bigint, note text, duration int,
   submitted_at timestamptz not null default now()
 );
@@ -277,6 +285,7 @@ alter table public.classes enable row level security;
 alter table public.students enable row level security;
 alter table public.skills enable row level security;
 alter table public.questions enable row level security;
+alter table public.qimg enable row level security;
 alter table public.tests enable row level security;
 alter table public.test_results enable row level security;
 alter table public.improvement_rounds enable row level security;
@@ -305,7 +314,7 @@ create policy subjects_teacher on public.subjects for all to authenticated
 do $$
 declare t text;
 begin
-  foreach t in array array['classes','students','skills','questions','tests','test_results','improvement_rounds',
+  foreach t in array array['classes','students','skills','questions','qimg','tests','test_results','improvement_rounds',
                            'improvement_items','sheets','sends','perf_tasks','behavior_events','class_groups'] loop
     execute format('create policy %I on public.%I for all to authenticated using (teacher_id = app.my_teacher()) with check (teacher_id = app.my_teacher())', t || '_teacher', t);
   end loop;
