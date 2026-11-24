@@ -176,12 +176,12 @@ Streaming for long text (`teach`, `plan`). Per-teacher daily quota in `ai_jobs`.
 ### 11. Migration checklist
 - [x] Decisions 1–5 answered
 - [ ] Repo private; `.gitignore` blocks `itqan-data-*.json`, `itqan-source.html`, `pins-*.csv`, `.env*`
-- [ ] Scaffold, design tokens, Readex Pro, RTL layout, i18n
-- [ ] `lib/calc` ported + unit tests + parity harness
-- [ ] SQL migrations: tables, indexes, helper functions, RLS, storage policies, `student_portal` RPC
-- [ ] RLS tests (student A cannot read B; student cannot read answer keys; teacher isolation)
-- [ ] `scripts/import.ts` idempotent + counts + 3-student spot-check
-- [ ] Teacher auth + TOTP; student PIN login + throttling; preview mode
+- [x] Scaffold, design tokens, Readex Pro, RTL layout, i18n
+- [x] `lib/calc` ported + unit tests + parity harness
+- [x] SQL migrations: tables, indexes, helper functions, RLS, storage policies, `student_portal` RPC
+- [x] RLS tests (student A cannot read B; student cannot read answer keys; teacher isolation)
+- [x] `scripts/import.ts` idempotent + counts + 3-student spot-check
+- [x] Teacher auth + TOTP; student PIN login + throttling; preview mode
 - [ ] Students / skills / bank / tests / PDFs
 - [ ] Grading (manual, Excel, AI) + offline draft
 - [ ] Analysis, decision summary, distribution chart, gap (3 targets), CSV
