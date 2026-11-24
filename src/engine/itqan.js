@@ -864,6 +864,7 @@ async function teacherPw(mode) {
   try {
     if (mode === "enter") {
       const r = await Store.signIn($("#tpE").value.trim(), $("#tp1").value);
+      if (r && r.setup) { S.role = "teacher"; A.importOpen(true); return; }
       if (r && r.mfa) { modal(`<h3>التحقق بخطوتين</h3><form id="tpForm" data-mode="mfa" data-f="${esc(r.factorId)}"><label class="fld">الرمز من تطبيق المصادقة<input id="tpC" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></label><small id="tpErr" class="err"></small><div class="row end"><button class="btn" type="submit">تأكيد</button></div></form>`); $("#tpC").focus(); return; }
     } else if (mode === "mfa" || mode === "mfaVerify") {
       await Store.mfaVerify($("#tpForm").dataset.f, $("#tpC").value.trim());
@@ -2049,7 +2050,7 @@ function behCard(sid) {
 /* ---------- school settings ---------- */
 function vSchool() {
   const s = S.settings, f = (k, l) => `<label class="fld">${l}<input id="st_${k}" value="${esc(s[k])}"></label>`;
-  return `<section class="card"><h2>نسخة كاملة من بيانات المنصة</h2><p class="muted">ملف واحد فيه الطالبات والمهارات وبنك الأسئلة والاختبارات ونتائجها واختبارات التحسين وما أُرسل لكل طالبة. احفظيه نسخة احتياطية في مكان آمن. لا يحوي كلمة مرورك ولا أرقام الهوية.</p><div class="row"><button class="btn" data-act="exportAll">تنزيل نسخة البيانات (JSON)</button></div></section>
+  return `<section class="card"><h2>نسخة كاملة من بيانات المنصة</h2><p class="muted">ملف واحد فيه الطالبات والمهارات وبنك الأسئلة والاختبارات ونتائجها واختبارات التحسين وما أُرسل لكل طالبة. احفظيه نسخة احتياطية في مكان آمن. لا يحوي كلمة مرورك ولا أرقام الهوية.</p><div class="row"><button class="btn" data-act="exportAll">تنزيل نسخة البيانات (JSON)</button><button class="btn ghost" data-act="importOpen">استيراد ملف بيانات المنصة السابقة</button></div></section>
   <section class="card"><h2>بيانات المدرسة والترويسة</h2><p class="muted">تظهر هذه البيانات والشعار في ترويسة كل ورقة اختبار وملف PDF.</p>
     <form id="schoolForm" class="grid2">${f("school", "اسم المدرسة")}${f("region", "إدارة التعليم")}${f("teacher", "اسم المعلمة")}${f("subject", "المادة")}${f("grade", "الصف")}${f("term", "الفصل الدراسي")}${f("year", "العام الدراسي")}
       <div class="fld">شعار المدرسة<div class="row">${s.logo ? `<img class="logoPrev" src="${esc(s.logo)}" alt="شعار المدرسة">` : `<span class="muted">لا يوجد شعار</span>`}<label class="btn ghost sm">اختيار صورة<input type="file" accept="image/*" hidden data-chg="logo"></label>${s.logo ? `<button type="button" class="lnk danger" data-act="logoRm">إزالة</button>` : ""}</div></div>
@@ -2057,6 +2058,8 @@ function vSchool() {
       <div class="fld">شعار الوزارة<div class="row">${s.logo2 ? `<img class="logoPrev" src="${esc(s.logo2)}" alt="شعار الوزارة">` : `<span class="muted">لا يوجد شعار</span>`}<label class="btn ghost sm">اختيار صورة<input type="file" accept="image/*" hidden data-chg="logo" data-k="logo2"></label></div></div>
       <div class="row end full"><button type="button" class="btn ghost" data-act="tpChange">تغيير كلمة المرور</button>${Store.mfaOn ? `<button type="button" class="btn ghost" data-act="mfaOff">إلغاء التحقق بخطوتين</button>` : `<button type="button" class="btn ghost" data-act="mfaSetup">تفعيل التحقق بخطوتين</button>`}<button class="btn" type="submit">حفظ</button></div></form></section>`;
 }
+A.importOpen = (first) => modal(`<h3>${first === true ? "مرحبًا بك في إتقان" : "استيراد ملف البيانات"}</h3><p>${first === true ? "هذه أول مرة تدخلين. " : ""}اختاري ملف <b dir="ltr">itqan-data-….json</b> الذي نزّلتِه من زر «تنزيل نسخة البيانات» في المنصة السابقة. تُنقل البيانات كلها، ويُحوَّل رقم الهوية إلى بصمة مشفّرة ولا يُحفظ. يمكن تكرار الاستيراد دون أن يتكرر شيء.</p><label class="btn">اختيار الملف<input type="file" accept="application/json,.json" hidden data-chg="importFile"></label><div id="impRep"></div>`, true);
+A.importDone = () => guard(async () => { A.close(); S.loaded = false; render(); await loadAll(); render(); });
 A.logoRm = () => guard(async () => { S.settings.logo = ""; await save.settings(); render(); });
 
 /* ---------- events ---------- */
@@ -2182,6 +2185,17 @@ const C = {
   eAI: (el) => el.files.length && gradeImages([...el.files]),
   aiSid: (el) => { S.ui.entry.ai[+el.dataset.i].sid = el.value; },
   aiKind: (el) => { S.ui.aiKind = el.value; },
+  importFile: (el) => guard(async () => {
+    const f = el.files[0]; if (!f) return; const out = $("#impRep");
+    out.innerHTML = `<p class="note">جارٍ نقل البيانات… قد يستغرق ذلك دقيقة.</p>`;
+    const r = await Store.importFile(f);
+    const lab = { students: "الطالبات", classes: "الفصول", skills: "المهارات", questions: "بنك الأسئلة", tests: "الاختبارات", test_results: "نتائج الاختبارات", improvement_rounds: "اختبارات التحسين", improvement_items: "أسئلة التحسين لكل طالبة", sheets: "أوراق الإجابة", acks: "تأكيدات الاطلاع", notes: "الملاحظات", behavior_events: "السلوك", perf_tasks: "المهام الأدائية" };
+    out.innerHTML = `<p class="note ${r.same ? "ok" : "bad"}"><b>${r.same ? "اكتمل النقل، والأرقام مطابقة للملف." : "اكتمل النقل، لكن الفحص وجد اختلافًا. لا تعتمدي على الموقع قبل مراجعته."}</b></p>
+      <div class="scroll"><table class="tbl"><thead><tr><th>البيانات</th><th>في الملف</th><th>في المنصة</th></tr></thead><tbody>${r.counts.filter((c) => lab[c.table]).map((c) => `<tr><td>${lab[c.table]}</td><td class="num">${c.file}</td><td class="num">${c.db ?? "—"}</td></tr>`).join("")}</tbody></table></div>
+      <h4>فحص 3 طالبات (الدرجة قبل النقل وبعده)</h4><ul>${r.checks.map((c) => `<li><span dir="ltr">${esc(c.sid)}</span>: ${esc(c.file)} ← ${esc(c.db)} ${c.same ? "✓" : "✗"}</li>`).join("")}</ul>
+      ${(r.warnings || []).length ? `<p class="muted small">${r.warnings.length} ملاحظة: بعض الملفات (مثل أوراق الإجابة) تحتاج رفعًا من جديد.</p>` : ""}
+      <div class="row end"><button class="btn" data-act="importDone">فتح المنصة</button></div>`;
+  }),
   qImg: (el) => guard(async () => {
     const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej({ message: "تعذّر قراءة الصورة." }); i.src = URL.createObjectURL(el.files[0]); });
     const r = Math.min(1, 900 / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * r); c.height = Math.round(im.height * r);

@@ -18,7 +18,13 @@ export async function POST(req: Request) {
   if (pin.length < 4 || pin.length > 20) return bad();
 
   const { data: st } = await admin.from("students").select("id, pin_hash, auth_user_id").eq("pin_lookup", pinLookup(pin)).maybeSingle();
-  if (!st || !st.auth_user_id || !verifyPin(pin, st.pin_hash)) return bad();
+  if (!st || !verifyPin(pin, st.pin_hash)) return bad();
+  if (!st.auth_user_id) { // first sign-in: create her sign-in identity (no e-mail is ever sent to it)
+    const { data: nu } = await admin.auth.admin.createUser({ email: `${st.id.toLowerCase()}@students.itqan.invalid`, email_confirm: true, app_metadata: { role: "student" } });
+    if (!nu?.user) return fail("server", 500);
+    await admin.from("students").update({ auth_user_id: nu.user.id }).eq("id", st.id);
+    st.auth_user_id = nu.user.id;
+  }
 
   const { data: u } = await admin.auth.admin.getUserById(st.auth_user_id);
   if (!u?.user?.email) return bad();

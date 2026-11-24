@@ -101,6 +101,7 @@ async function teacherPw(mode) {
   try {
     if (mode === "enter") {
       const r = await Store.signIn($("#tpE").value.trim(), $("#tp1").value);
+      if (r && r.setup) { S.role = "teacher"; A.importOpen(true); return; }
       if (r && r.mfa) { modal(`<h3>التحقق بخطوتين</h3><form id="tpForm" data-mode="mfa" data-f="${esc(r.factorId)}"><label class="fld">الرمز من تطبيق المصادقة<input id="tpC" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></label><small id="tpErr" class="err"></small><div class="row end"><button class="btn" type="submit">تأكيد</button></div></form>`); $("#tpC").focus(); return; }
     } else if (mode === "mfa" || mode === "mfaVerify") {
       await Store.mfaVerify($("#tpForm").dataset.f, $("#tpC").value.trim());
@@ -211,6 +212,27 @@ sub("""<p class="muted">ملف واحد فيه الطالبات والمهارا
     """<p class="muted">ملف واحد فيه الطالبات والمهارات وبنك الأسئلة والاختبارات ونتائجها واختبارات التحسين وما أُرسل لكل طالبة. احفظيه نسخة احتياطية في مكان آمن. لا يحوي كلمة مرورك ولا أرقام الهوية.</p>""")
 sub("""const { auth, ...settings } = S.settings || {};""", """const settings = S.settings || {};""")
 sub("""qimg: S.qimg || {}, behavior: S.behavior || null };""", """qimg: S.qimg || {}, behavior: S.behavior || null, stars: S.stars || null };""")
+
+# 10b. one-time import of the old app's data file (first sign-in, or later from the school page)
+sub("""<div class="row"><button class="btn" data-act="exportAll">تنزيل نسخة البيانات (JSON)</button></div></section>""",
+    """<div class="row"><button class="btn" data-act="exportAll">تنزيل نسخة البيانات (JSON)</button><button class="btn ghost" data-act="importOpen">استيراد ملف بيانات المنصة السابقة</button></div></section>""")
+sub("""A.logoRm = () =>""", """A.importOpen = (first) => modal(`<h3>${first === true ? "مرحبًا بك في إتقان" : "استيراد ملف البيانات"}</h3><p>${first === true ? "هذه أول مرة تدخلين. " : ""}اختاري ملف <b dir="ltr">itqan-data-….json</b> الذي نزّلتِه من زر «تنزيل نسخة البيانات» في المنصة السابقة. تُنقل البيانات كلها، ويُحوَّل رقم الهوية إلى بصمة مشفّرة ولا يُحفظ. يمكن تكرار الاستيراد دون أن يتكرر شيء.</p><label class="btn">اختيار الملف<input type="file" accept="application/json,.json" hidden data-chg="importFile"></label><div id="impRep"></div>`, true);
+A.importDone = () => guard(async () => { A.close(); S.loaded = false; render(); await loadAll(); render(); });
+A.logoRm = () =>""")
+sub("""  aiKind: (el) => { S.ui.aiKind = el.value; },
+  qImg:""", """  aiKind: (el) => { S.ui.aiKind = el.value; },
+  importFile: (el) => guard(async () => {
+    const f = el.files[0]; if (!f) return; const out = $("#impRep");
+    out.innerHTML = `<p class="note">جارٍ نقل البيانات… قد يستغرق ذلك دقيقة.</p>`;
+    const r = await Store.importFile(f);
+    const lab = { students: "الطالبات", classes: "الفصول", skills: "المهارات", questions: "بنك الأسئلة", tests: "الاختبارات", test_results: "نتائج الاختبارات", improvement_rounds: "اختبارات التحسين", improvement_items: "أسئلة التحسين لكل طالبة", sheets: "أوراق الإجابة", acks: "تأكيدات الاطلاع", notes: "الملاحظات", behavior_events: "السلوك", perf_tasks: "المهام الأدائية" };
+    out.innerHTML = `<p class="note ${r.same ? "ok" : "bad"}"><b>${r.same ? "اكتمل النقل، والأرقام مطابقة للملف." : "اكتمل النقل، لكن الفحص وجد اختلافًا. لا تعتمدي على الموقع قبل مراجعته."}</b></p>
+      <div class="scroll"><table class="tbl"><thead><tr><th>البيانات</th><th>في الملف</th><th>في المنصة</th></tr></thead><tbody>${r.counts.filter((c) => lab[c.table]).map((c) => `<tr><td>${lab[c.table]}</td><td class="num">${c.file}</td><td class="num">${c.db ?? "—"}</td></tr>`).join("")}</tbody></table></div>
+      <h4>فحص 3 طالبات (الدرجة قبل النقل وبعده)</h4><ul>${r.checks.map((c) => `<li><span dir="ltr">${esc(c.sid)}</span>: ${esc(c.file)} ← ${esc(c.db)} ${c.same ? "✓" : "✗"}</li>`).join("")}</ul>
+      ${(r.warnings || []).length ? `<p class="muted small">${r.warnings.length} ملاحظة: بعض الملفات (مثل أوراق الإجابة) تحتاج رفعًا من جديد.</p>` : ""}
+      <div class="row end"><button class="btn" data-act="importDone">فتح المنصة</button></div>`;
+  }),
+  qImg:""")
 
 # 11. forms added by the port
 sub("""  if (f.id === "tpForm") return teacherPw(f.dataset.mode);""", """  if (f.id === "tpForm") return teacherPw(f.dataset.mode);

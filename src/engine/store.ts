@@ -278,7 +278,7 @@ export function createStore() {
       if (error) throw { message: "البريد أو كلمة المرور غير صحيحة." };
       const { data: { user } } = await sb.auth.getUser();
       const { data: t } = await sb.from("teachers").select("id").eq("id", user!.id).maybeSingle();
-      if (!t) { await sb.auth.signOut(); throw { message: "هذا الحساب ليس حساب معلمة في المنصة." }; }
+      if (!t) return { setup: true }; // first sign-in: the import screen decides (the server checks who may import)
       const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
         const { data: f } = await sb.auth.mfa.listFactors();
@@ -307,6 +307,15 @@ export function createStore() {
     async changePassword(pw: string) { const { error } = await sb.auth.updateUser({ password: pw }); if (error) throw { message: error.message }; },
     async resetPassword(email: string) { await sb.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/reset` }); },
     async signOut() { await sb.auth.signOut(); own = null; role = null; state = {}; },
+
+    /** Sends the old app's data file (compressed) to the server, which imports it. */
+    async importFile(file: File) {
+      const gz = await new Response(file.stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer();
+      const r = await fetch("/api/import", { method: "POST", headers: { "content-type": "application/gzip" }, body: gz });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw { message: r.status === 403 ? "هذا الحساب غير مسموح له بالاستيراد. تأكدي من البريد المسجَّل في إعدادات الموقع." : j.error === "file" ? "الملف ليس ملف بيانات إتقان." : "تعذّر الاستيراد. حاولي مرة أخرى." };
+      return j;
+    },
 
     /* ---- national ID numbers: only the server can match them ---- */
     async matchPins(pins: string[]) { if (!pins.length) return {}; return (await api("/api/students/match", { pins })).map; },
