@@ -8,7 +8,7 @@ export default function Preview() {
       const data = await (await fetch("/api/preview-data")).json();
       const role = new URLSearchParams(location.search).get("as") || "teacher";
       const writes: unknown[] = ((window as any).__writes = []);
-      const sample: any = async (_p: string, o: any = {}) => { const text = "اقتراح تجريبي."; o.onText?.({ text }); return { text }; };
+      const sample: any = async (_p: string, o: any = {}) => { ((window as any).__prompts = (window as any).__prompts || []).push(_p); const text = "اقتراح تجريبي."; o.onText?.({ text }); return { text }; };
       let pageNo = 0;
       sample.json = async (p: string) => p.includes("اسم الطالبة المكتوب") ? (pageNo++ % 2 ? { name: null } : { name: data.roster[pageNo].name, sheet: null }) : ({ title: "مهمة تجريبية", desc: "وصف", del: "img", rubric: [{ c: "الدقة", max: 5, lv: ["أ", "ب", "ج"] }] });
       const Store = {

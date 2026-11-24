@@ -287,6 +287,8 @@ sub("""    const bySkill = {}; pool.forEach((q) => (bySkill[q.skill] = bySkill[q
 
 # 14. the new "quality & accreditation" page (src/engine/ext/*.js run inside boot, after the original code)
 sub("""portal: vPortal }[r] || vHome;""", """portal: vPortal, quality: vQuality, tasks: vTasksM }[r] || vHome;""")
+# 16. the teacher's AI assistant on the analysis page, right after the decision summary
+sub("""  ${decisionCard(t, g)}""", """  ${decisionCard(t, g)}${coachCard(t, g)}""")
 # 15. performance tasks until mastery: on the student's own page and in the teacher's report
 sub("""${ewStudentCard(S.sid)}<section class="card">""", """${ewStudentCard(S.sid)}${setTasksStudent(S.sid)}<section class="card">""")
 sub("""${ewStudentCard(S.sid)}${behCard(S.sid)}""", """${ewStudentCard(S.sid)}${setTasksStudent(S.sid)}${behCard(S.sid)}""")
