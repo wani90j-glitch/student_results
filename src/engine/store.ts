@@ -348,6 +348,13 @@ export function createStore() {
       if (!r.ok) throw { code: j.error || "error", message: j.error === "rate_limited" ? "محاولات كثيرة اليوم. حاولي غدًا." : "تعذّر تسليم العمل. حاولي مرة أخرى." };
       return j.ev;
     },
+    /** Short-lived links for a list of stored files: {"bucket:path": url}. */
+    async signedUrls(items: { bucket: string; path: string }[]) {
+      if (!items.length) return {};
+      const out: Record<string, string> = {};
+      for (const c of chunks(items, 60)) Object.assign(out, (await api("/api/signed", { items: c })).urls);
+      return out;
+    },
     /** Fills <img>/<a> elements marked data-sb (bucket) + data-path with short-lived signed links. */
     async hydrate(root: HTMLElement | null, force?: boolean) {
       if (!root) return;

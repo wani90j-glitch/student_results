@@ -22,8 +22,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         {children}
-        <Script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" strategy="afterInteractive" />
-        <Script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" strategy="afterInteractive" />
+        <Script src="/vendor/jspdf.umd.min.js" strategy="afterInteractive" />
+        <Script src="/vendor/xlsx.full.min.js" strategy="afterInteractive" />
       </body>
     </html>
   );

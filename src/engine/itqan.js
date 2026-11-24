@@ -1231,7 +1231,7 @@ A.qImport = (el) => { S.ui.impSkill = (el && el.dataset.skill) || ""; const k = 
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej({ message: "تعذّر تحميل مكتبة قراءة PDF." }); document.head.appendChild(s); }); }
 async function fileToImages(file) {
   if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) return [file];
-  if (!window.pdfjsLib) { await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"); await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"); }
+  if (!window.pdfjsLib) { await loadScript("/vendor/pdf.min.js"); await loadScript("/vendor/pdf.worker.min.js"); }
   const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise, out = [];
   for (let p = 1; p <= Math.min(pdf.numPages, 12); p++) {
     const page = await pdf.getPage(p), vp = page.getViewport({ scale: 1.6 }), c = document.createElement("canvas");
@@ -1641,7 +1641,7 @@ function fitCanvas(src, w0, h0, max) { const s = Math.min(1, max / Math.max(w0, 
 async function imgFrames(file) { const u = URL.createObjectURL(file); try { const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no({ message: "تعذّر فتح الصورة." }); i.src = u; }); return [fitCanvas(im, im.naturalWidth, im.naturalHeight, 1500)]; } finally { URL.revokeObjectURL(u); } }
 let _pdfjs = null;
 async function pdfFrames(file) {
-  if (!_pdfjs) { await new Promise((ok, no) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"; s.onload = ok; s.onerror = () => no({ message: "تعذّر تحميل قارئ PDF. جرّبي رفع صور الصفحات." }); document.head.appendChild(s); }); _pdfjs = window.pdfjsLib; _pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; }
+  if (!_pdfjs) { await new Promise((ok, no) => { const s = document.createElement("script"); s.src = "/vendor/pdf.min.js"; s.onload = ok; s.onerror = () => no({ message: "تعذّر تحميل قارئ PDF. جرّبي رفع صور الصفحات." }); document.head.appendChild(s); }); _pdfjs = window.pdfjsLib; _pdfjs.GlobalWorkerOptions.workerSrc = "/vendor/pdf.worker.min.js"; }
   const doc = await _pdfjs.getDocument({ data: await file.arrayBuffer() }).promise, out = [];
   for (let p = 1; p <= Math.min(doc.numPages, 5); p++) { const pg = await doc.getPage(p), v0 = pg.getViewport({ scale: 1 }), v = pg.getViewport({ scale: Math.min(2, 1500 / Math.max(v0.width, v0.height)) }), cv = document.createElement("canvas"); cv.width = v.width; cv.height = v.height; await pg.render({ canvasContext: cv.getContext("2d"), viewport: v }).promise; out.push(cv); }
   return out;
@@ -1912,7 +1912,7 @@ function vImprove() {
   return `<section class="card"><div class="hd"><h2>اختبار تحسين المهارات المفقودة</h2><div class="row wrap">${testSelect("imT")}</div></div>
     <div class="row wrap"><label class="fld">أي المهارات يشملها اختبار كل طالبة؟<select id="impCrit">${opt("lost", "كل مهارة فقدت فيها درجة", "lost")}${opt("80", "المهارات الأقل من 80%")}${opt("50", "المهارات الأقل من 50%")}</select></label>
       <button class="btn" data-act="impMake" data-id="${t.id}">${IC.plus} إنشاء ${"اختبار التحسين " + (ORDN[list.length + 1] || list.length + 1)} لكل طالبة</button></div>
-    <p class="muted">عدد اختبارات التحسين مفتوح: كل اختبار جديد يشمل فقط ما بقي مفقودًا بعد الاختبارات السابقة${list.length ? "، فأدخلي درجات " + roundName(list[list.length - 1]) + " أولًا" : ""}. عدد أسئلة كل مهارة يساوي الدرجات المفقودة فيها، وتُقدَّم الأسئلة التي لم ترها الطالبة من قبل.</p></section>${body}`;
+    <p class="muted">عدد اختبارات التحسين مفتوح: كل اختبار جديد يشمل فقط ما بقي مفقودًا بعد الاختبارات السابقة${list.length ? "، فأدخلي درجات " + roundName(list[list.length - 1]) + " أولًا" : ""}. عدد أسئلة كل مهارة يساوي الدرجات المفقودة فيها، وتُقدَّم الأسئلة التي لم ترها الطالبة من قبل.</p></section>${list.length ? reportButtons(t) : ""}${body}`;
 }
 /** Skills some students still have not mastered after every improvement round: the teacher's cue to re-teach or rethink the lesson. */
 function impStill(t) {
@@ -2348,6 +2348,180 @@ document.addEventListener("submit", (e) => {
   }, "حُفظت المستهدفات.");
 });
 { const st = document.createElement("style"); st.textContent = `@media print{.top,.tabs,.noprint,.note.peek,#toast,#tour{display:none!important}body{background:#fff}.card{break-inside:avoid;box-shadow:none}details.sheet>*{display:block}details.sheet:not([open])>*:not(summary){display:block}#app{max-width:none;padding:0}}`; document.head.appendChild(st); }
+
+/* ===== Official class documents (added in the new platform) =====
+ * 1) «كشف درجات العلوم بعد التحسين»: one table per class — period mark, improvement mark, mark after improvement, note.
+ * 2) «نتائج تصحيح اختبار التحسين»: the same summary followed by each student's graded improvement paper(s).
+ * Same header, fonts and table style as the platform's other papers. */
+const impOf = (t, sid) => { // all graded improvement rounds of this test, for one student
+  let got = 0, of = 0, any = false;
+  impsOf(t.id).forEach((m) => { const it = m.items[sid], r = (m.results || {})[sid]; if (!it) return; of += it.length; if (r) { any = true; got += r.reduce((a, v) => a + (+v ? 1 : 0), 0); } });
+  return { got, of, any };
+};
+function gradeRows(t, cls) {
+  return sortedStudents(cls).filter((s) => t.results[s.id]).map((s, i) => {
+    const x = studentStats(t, s.id), im = impOf(t, s.id), still = x.missing.map((o) => (sk(o.id) || {}).name).filter(Boolean);
+    return { no: i + 1, s, base: x.base, total: x.total, imp: im.of ? (im.any ? `${im.got} من ${im.of}` : `— من ${im.of}`) : "—", after: x.score, note: still.length ? still.join("، ") : "أتقنت جميع المهارات" };
+  });
+}
+function classTable(d, t, cls, title) {
+  const s = S.settings, rows = gradeRows(t, cls), tot = testMax(t), W = d.W - 2 * MG, R = d.W - MG, size = 20, lh = size * 1.45;
+  header(d, [["المادة", s.subject], ["الصف", `${s.grade} ${cls}`], ["المعلمة", s.teacher], ["التاريخ", "      /      / " + s.year]]);
+  titleBand(d, `${title} – ${t.name.replace(/^اختبار\s*/, "")} – ${s.grade} ${cls}`);
+  d.y += 12;
+  const cols = [["م", 0.05], ["اسم الطالبة", 0.27], [`درجة الفترة (من ${fmt(tot)})`, 0.12], ["درجة التحسين", 0.11], [`الدرجة بعد التحسين (من ${fmt(tot)})`, 0.13], ["ملاحظة: مهارات لم تُتقن بعد", 0.32]];
+  const head = () => { let rx = R; cols.forEach(([c, w]) => { cell(d.x, rx, d.y, w * W, 62, lines(d.x, c, w * W, 19, 700), { fill: "#1f1f1f", color: "#fff", w: 700, size: 19 }); rx -= w * W; }); d.y += 62; };
+  head();
+  rows.forEach((r) => {
+    const vals = [String(r.no), r.s.name, fmt(r.base), r.imp, fmt(r.after), r.note];
+    const ls = vals.map((v, c) => lines(d.x, v, cols[c][1] * W, c === 5 ? 18 : size, c === 4 ? 700 : 400)), h = Math.max(...ls.map((l) => l.length)) * lh + 12;
+    if (ensure(d, h)) head();
+    let rx = R;
+    ls.forEach((l, c) => { cell(d.x, rx, d.y, cols[c][1] * W, h, l, { size: c === 5 ? 18 : size, align: c === 1 || c === 5 ? "right" : "center", w: c === 4 ? 700 : 400, fill: c === 4 ? (r.after >= tot ? "#e2f3ea" : WARM) : null }); rx -= cols[c][1] * W; });
+    d.y += h;
+  });
+  const n = rows.length, m0 = n ? rows.reduce((a, r) => a + r.base, 0) / n : 0, m1 = n ? rows.reduce((a, r) => a + r.after, 0) / n : 0, full = rows.filter((r) => r.after >= tot).length;
+  ensure(d, 110); d.y += 14;
+  text(d, `عدد الطالبات: ${n}  |  متوسط درجة الفترة: ${fmt(Math.round(m0 * 10) / 10)} من ${fmt(tot)}  |  المتوسط بعد التحسين: ${fmt(Math.round(m1 * 10) / 10)} من ${fmt(tot)}  |  أتقنّ جميع المهارات: ${full}`, { size: 21, w: 700 });
+  d.y += 18; text(d, "التوقيع: ............................", { size: 21 });
+  return rows;
+}
+function docGrades(t, cls) {
+  const d = newDoc({ land: true, footer: "كشف الدرجات بعد التحسين" });
+  (cls ? [cls] : classes()).filter((c) => sortedStudents(c).some((s) => t.results[s.id])).forEach((c, i) => { if (i) addPage(d); classTable(d, t, c, `كشف درجات ${S.settings.subject} بعد التحسين`); });
+  finishPages(d); return d;
+}
+/** Summary per class, then each student's graded improvement paper(s), one page each. */
+async function docImpResults(t, cls) {
+  const ms = impsOf(t.id), keyOf = (sid) => { for (let k = ms.length - 1; k >= 0; k--) { const v = (S.sheets[ms[k].id + "_g"] || {})[sid]; if (v && !String(v).startsWith("legacy:")) return v; } return null; };
+  const want = [];
+  const d = newDoc({ land: true, footer: "نتائج تصحيح اختبار التحسين" });
+  (cls ? [cls] : classes()).filter((c) => sortedStudents(c).some((s) => t.results[s.id])).forEach((c, i) => {
+    if (i) addPage(d);
+    const rows = classTable(d, t, c, "نتائج تصحيح اختبار التحسين");
+    rows.forEach((r) => { const v = keyOf(r.s.id); if (v) want.push({ r, cls: c, pages: (S.sheetPages || {})[v] || [v] }); });
+  });
+  const urls = await Store.signedUrls(want.flatMap((w) => w.pages.map((p) => ({ bucket: "sheets", path: p }))));
+  const load = (u) => new Promise((ok) => { if (!u) return ok(null); const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => ok(im); im.onerror = () => ok(null); im.src = u; });
+  for (const w of want) for (let k = 0; k < w.pages.length; k++) {
+    const im = await load(urls["sheets:" + w.pages[k]]);
+    addPage(d);
+    const x = d.x, W = d.W - 2 * MG, top = MG;
+    setFont(x, 22, 700); x.fillText(`${w.r.no}) ${w.r.s.name} – ${w.cls} – بعد التحسين: ${fmt(w.r.after)} من ${fmt(w.r.total)}${w.pages.length > 1 ? ` – صفحة ${k + 1} من ${w.pages.length}` : ""}`, d.W - MG, top + 26);
+    if (im) { const box = d.H - top - 60 - MG, r = Math.min(W / im.width, box / im.height), iw = im.width * r, ih = im.height * r; x.drawImage(im, MG + (W - iw) / 2, top + 44, iw, ih); x.strokeRect(MG + (W - iw) / 2, top + 44, iw, ih); }
+    else { setFont(x, 22, 400); x.fillText("تعذّر تحميل صورة الورقة.", d.W - MG, top + 90); }
+  }
+  finishPages(d); return { d, sheets: want.length };
+}
+A.pdfGrades = (el) => { const t = S.tests[el.dataset.id] || curTest(), c = el.dataset.cls || ""; pdfBusy("كشف الدرجات بعد التحسين", () => docGrades(t, c), `كشف درجات ${S.settings.subject || ""} بعد التحسين${c ? " " + c.replace("/", "-") : ""}`); };
+A.pdfImpResults = (el) => guard(async () => {
+  const t = S.tests[el.dataset.id] || curTest(), c = el.dataset.cls || "";
+  toast("جارٍ تجهيز نتائج التصحيح مع الأوراق…"); await prepFonts();
+  const r = await docImpResults(t, c);
+  await savePDF(r.d, `نتائج تصحيح اختبار التحسين${c ? " " + c.replace("/", "-") : ""}.pdf`);
+  toast(r.sheets ? `الملف جاهز: ${r.sheets} ورقة مصحَّحة.` : "الملف جاهز. لا توجد أوراق مصحَّحة مرفقة بعد؛ أرفقيها من «إرفاق أوراق مصحَّحة من ملف واحد».");
+});
+/** Buttons shown on the improvement page. */
+function reportButtons(t) {
+  const cs = classes();
+  return `<section class="card"><h2>كشوف رسمية للطباعة</h2><p class="muted">كشف لكل فصل بدرجة الفترة ودرجة التحسين والدرجة بعده والمهارات التي لم تُتقن بعد، مع ترويسة المدرسة والتوقيع.</p>
+    <div class="row wrap"><b>كشف الدرجات بعد التحسين:</b><button class="btn ghost sm" data-act="pdfGrades" data-id="${t.id}" data-cls="">${IC.dl} كل الفصول</button>${cs.map((c) => `<button class="btn ghost sm" data-act="pdfGrades" data-id="${t.id}" data-cls="${esc(c)}">${IC.dl} فصل ${esc(c)}</button>`).join("")}</div>
+    <div class="row wrap"><b>نتائج تصحيح اختبار التحسين مع الأوراق المصحَّحة:</b><button class="btn ghost sm" data-act="pdfImpResults" data-id="${t.id}" data-cls="">${IC.dl} كل الفصول</button>${cs.map((c) => `<button class="btn ghost sm" data-act="pdfImpResults" data-id="${t.id}" data-cls="${esc(c)}">${IC.dl} فصل ${esc(c)}</button>`).join("")}</div>
+    <div class="row wrap"><button class="btn" data-act="bulkOpen" data-id="${t.id}">إرفاق أوراق مصحَّحة من ملف واحد (PDF أو صور)</button><span class="muted">ترفعين ملفًا فيه أوراق فصل كامل، فيقرأ الذكاء الاصطناعي اسم كل طالبة ويربط صفحاتها بها، ثم تراجعين قبل الحفظ.</span></div></section>`;
+}
+
+/* ===== Attaching a whole class's scanned papers from one file (added in the new platform) =====
+ * The teacher uploads one PDF (or several photos). Each page is shown to the AI, which reads only the student's
+ * name / sheet number written on it; pages with no name continue the previous student. The teacher reviews and
+ * corrects every match before anything is saved. Pages go to private storage under the chosen paper. */
+let BULK = null; // { tid, key, cls, pages: [{blob, thumb, read, sid}] }
+async function allPages(file) {
+  if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) return [{ blob: file, text: "" }];
+  if (!window.pdfjsLib) { await loadScript("/vendor/pdf.min.js"); window.pdfjsLib.GlobalWorkerOptions.workerSrc = "/vendor/pdf.worker.min.js"; }
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise, out = [];
+  for (let p = 1; p <= Math.min(pdf.numPages, 300); p++) {
+    const page = await pdf.getPage(p), v0 = page.getViewport({ scale: 1 }), vp = page.getViewport({ scale: Math.min(2, 1800 / Math.max(v0.width, v0.height)) }), c = document.createElement("canvas");
+    c.width = vp.width; c.height = vp.height;
+    await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+    const tc = await page.getTextContent().catch(() => null), text = tc ? tc.items.map((it) => it.str).join(" ") : "";
+    out.push({ blob: await new Promise((r) => c.toBlob(r, "image/jpeg", 0.85)), text });
+    const el = $("#bulkOut"); if (el) el.innerHTML = `<p class="note">جارٍ تجهيز الصفحات… ${p} من ${pdf.numPages}</p>`;
+  }
+  return out;
+}
+const thumbOf = (blob) => new Promise((ok) => { const u = URL.createObjectURL(blob), im = new Image(); im.onload = () => { const r = 150 / Math.max(im.width, im.height), c = document.createElement("canvas"); c.width = im.width * r; c.height = im.height * r; c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u); ok(c.toDataURL("image/jpeg", 0.6)); }; im.onerror = () => ok(""); im.src = u; });
+/** Best roster match for a name read from a page: most shared name parts (after Arabic normalisation). */
+function matchName(name, list) {
+  const toks = (v) => norm(v).split(" ").filter((w) => w.length > 1 && !/^(بنت|بن|ال)$/.test(w));
+  const a = toks(name || ""); if (!a.length) return null;
+  let best = null, score = 0;
+  list.forEach((s) => { const b = toks(s.name), common = a.filter((w) => b.includes(w)).length, sc = common / Math.max(2, Math.min(a.length, b.length)) + (b[0] === a[0] ? 0.25 : 0); if (sc > score) { score = sc; best = s; } });
+  return score >= 0.6 ? best : null;
+}
+A.bulkOpen = (el) => {
+  const t = S.tests[el.dataset.id] || curTest(), ms = impsOf(t.id);
+  BULK = { tid: t.id, key: ms.length ? ms[ms.length - 1].id + "_g" : t.id, cls: S.ui.cls || "", pages: [] };
+  modal(`<h3>إرفاق أوراق مصحَّحة من ملف واحد</h3>
+    <div class="row wrap"><label class="fld">نوع الأوراق<select id="bkKey" data-chg="bulkKey">${opt(t.id, "أوراق إجابة " + t.name, BULK.key)}${ms.map((m) => opt(m.id + "_g", roundName(m) + " بعد التصحيح", BULK.key)).join("")}</select></label>
+      <label class="fld sm">الفصل<select id="bkCls" data-chg="bulkCls">${opt("", "كل الفصول", BULK.cls)}${classes().map((c) => opt(c, "فصل " + c, BULK.cls)).join("")}</select></label></div>
+    <p class="muted">اختاري ملف PDF واحدًا (أو عدة صور). يقرأ الذكاء الاصطناعي الاسم المكتوب على كل صفحة فقط، والصفحة التي ليس عليها اسم تُضم إلى الطالبة السابقة. لا يُحفظ شيء قبل مراجعتك.</p>
+    <label class="btn">اختيار الملف<input type="file" accept="application/pdf,image/*" multiple hidden data-chg="bulkFile"></label><div id="bulkOut"></div>`, true);
+};
+function bulkGrid() {
+  const list = sortedStudents(BULK.cls), done = BULK.pages.filter((p) => p.sid).length;
+  return `<p><b>${BULK.pages.length}</b> صفحة · رُبطت ${done}. راجعي كل صفحة، وصحّحي الطالبة عند الحاجة، أو اختاري «تجاهل الصفحة».</p>
+    <div class="scroll" style="max-height:55vh"><table class="tbl"><thead><tr><th>الصفحة</th><th>المقروء</th><th>الطالبة</th></tr></thead><tbody>${BULK.pages.map((p, i) => `<tr><td><img src="${p.thumb}" alt="صفحة ${i + 1}" style="width:110px;border:1px solid #ccd"><br><small class="muted">${i + 1}</small></td><td><small>${p.read ? esc(p.read) : p.cont ? "تكملة للصفحة السابقة" : "—"}</small></td><td><select class="pii" data-chg="bulkSid" data-i="${i}">${opt("", "— تجاهل الصفحة —", p.sid || "")}${list.map((s) => opt(s.id, `${s.no}. ${s.name} (${s.cls})`, p.sid || "")).join("")}</select></td></tr>`).join("")}</tbody></table></div>
+    <div class="row end"><button class="btn" data-act="bulkSave">حفظ الأوراق في تقارير الطالبات</button></div>`;
+}
+Object.assign(C, {
+  bulkKey: (el) => { BULK.key = el.value; },
+  bulkCls: (el) => { BULK.cls = el.value; },
+  bulkSid: (el) => { BULK.pages[+el.dataset.i].sid = el.value; },
+  bulkFile: (el) => guard(async () => {
+    const files = [...el.files]; if (!files.length) return;
+    const out = $("#bulkOut"), list = sortedStudents(BULK.cls);
+    const pages = []; for (const f of files) pages.push(...(await allPages(f)));
+    const blobs = pages.map((p) => p.blob);
+    // 1) pages that carry text (e.g. sheets exported by the automatic marking program): match by ID number, then by name
+    const digits = (t) => [...new Set((String(t).replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).match(/\b[12]\d{9}\b/g) || []))];
+    const byPin = await Store.matchPins([...new Set(pages.flatMap((p) => digits(p.text)))]).catch(() => ({}));
+    const inList = new Set(list.map((s) => s.id));
+    BULK.pages = [];
+    let last = "";
+    for (let i = 0; i < blobs.length; i++) {
+      const ids = digits(pages[i].text), txt = pages[i].text.replace(/\s+/g, " ").trim();
+      if (ids.length > 1) { BULK.pages.push({ blob: blobs[i], thumb: await thumbOf(blobs[i]), read: `صفحة فيها ${ids.length} طالبات (قائمة)`, cont: false, sid: "" }); last = ""; continue; }
+      if (ids.length === 1 || txt.length > 40) {
+        const sid = ids.length === 1 && byPin[ids[0]] && inList.has(byPin[ids[0]]) ? byPin[ids[0]] : (matchName(txt.replace(/[\d|:،,-]+/g, " "), list) || {}).id || "";
+        BULK.pages.push({ blob: blobs[i], thumb: await thumbOf(blobs[i]), read: sid ? (ids.length === 1 ? "رقم الهوية في الصفحة" : "الاسم في الصفحة") : "نص الصفحة لم يُطابَق", cont: false, sid });
+        last = sid; continue;
+      }
+      // 2) scanned pages without text: the AI reads the name only
+      out.innerHTML = `<p class="note">${IC.ai} جارٍ قراءة اسم الطالبة في الصفحة ${i + 1} من ${blobs.length}…</p>`;
+      let r = null;
+      try { r = await Store.sample.json(`هذه صفحة من ورقة اختبار مدرسي مصحَّحة لطالبة. اقرأ فقط اسم الطالبة المكتوب على الصفحة (في الترويسة أو أعلى الورقة) ورقم الورقة إن وُجد. لا تقرأ الإجابات ولا الدرجات. إن لم يكن على الصفحة اسم طالبة (مثل صفحة ثانية من الورقة نفسها) فأعد name = null. أعد JSON فقط: {"name": "الاسم كما هو مكتوب أو null", "sheet": رقم الورقة أو null}`, { images: [blobs[i]] }); } catch (e) { r = null; }
+      const read = r && r.name ? String(r.name) : "", bySheet = r && r.sheet ? list.find((s) => s.no === +r.sheet) : null;
+      const st = bySheet || (read ? matchName(read, list) : null);
+      const sid = st ? st.id : read ? "" : last;
+      if (sid) last = sid;
+      BULK.pages.push({ blob: blobs[i], thumb: await thumbOf(blobs[i]), read, cont: !read && !!sid, sid });
+    }
+    out.innerHTML = bulkGrid();
+  }),
+});
+A.bulkSave = (el) => guard(async () => {
+  const by = {}; BULK.pages.forEach((p) => { if (p.sid) (by[p.sid] = by[p.sid] || []).push(p.blob); });
+  const ids = Object.keys(by); if (!ids.length) throw { message: "لم تُربط أي صفحة بطالبة." };
+  el.disabled = true;
+  S.sheets[BULK.key] = S.sheets[BULK.key] || {}; S.sheetPages = S.sheetPages || {};
+  for (let k = 0; k < ids.length; k++) {
+    el.textContent = `جارٍ الحفظ ${k + 1} من ${ids.length}…`;
+    const pages = await Store.uploadSheet(by[ids[k]], ids[k], BULK.key);
+    S.sheets[BULK.key][ids[k]] = pages[0]; S.sheetPages[pages[0]] = pages;
+  }
+  await save.sheets(BULK.key);
+  A.close(); render(); toast(`حُفظت أوراق ${ids.length} طالبة. أرسليها لأولياء الأمور من «اختبار التحسين» أو من تقرير كل طالبة.`);
+});
 
   window.__itqan = { S, render, A };
 }

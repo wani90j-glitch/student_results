@@ -258,9 +258,14 @@ sub("""function modal(html, wide) { $("#modal").innerHTML = `<div class="sheet $
 sub("""  ${Store.mode === "local" && S.role === "teacher" ? `<div class="note">البيانات محفوظة على هذا المتصفح فقط.</div>` : ""}""",
     """  ${Store.offline ? `<div class="note warn">لا يوجد اتصال الآن. تُحفظ تعديلاتك على هذا الجهاز وتُرسل تلقائيًا عند عودة الاتصال.</div>` : ""}""")
 
+# 13b. official class documents and bulk sheet upload on the improvement page
+sub("""الأسئلة التي لم ترها الطالبة من قبل.</p></section>${body}`;""", """الأسئلة التي لم ترها الطالبة من قبل.</p></section>${list.length ? reportButtons(t) : ""}${body}`;""")
+
 # 14. the new "quality & accreditation" page (src/engine/ext/*.js run inside boot, after the original code)
 sub("""portal: vPortal }[r] || vHome;""", """portal: vPortal, quality: vQuality }[r] || vHome;""")
 import glob, os
+# libraries are served by the site itself (works offline-tolerant, no third-party script host)
+code = code.replace("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/", "/vendor/")
 ext = "\n".join(open(f, encoding="utf-8").read() for f in sorted(glob.glob(os.path.join(os.path.dirname(__file__), "..", "src", "engine", "ext", "*.js"))))
 code = code + "\n" + ext
 
