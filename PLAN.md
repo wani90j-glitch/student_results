@@ -7,6 +7,10 @@
 
 ## الجزء الأول: ملخص للمعلمة
 
+### اسم الموقع
+- اسم الموقع **Itqan**: يكون اسم المشروع في Vercel `itqan`، فيصبح الرابط `itqan.vercel.app` إن كان متاحًا. إن كان محجوزًا نختار أقرب بديل مثل `itqan-edu.vercel.app`، ويمكن لاحقًا ربط نطاق خاص مثل `itqan.sa`.
+- عنوان الصفحة في المتصفح: «Itqan | إتقان».
+
 ### ما الذي سيتغيّر؟
 - المنصة الحالية ملف HTML واحد يحفظ البيانات داخل Claude. الجديدة **موقع مستقل** على Vercel برابط ثابت، وبياناته في قاعدة بيانات آمنة على Supabase.
 - **الشكل لن يتغيّر**: الألوان نفسها، وخط Readex Pro، والاتجاه من اليمين لليسار، والشاشات والعبارات نفسها.
@@ -59,6 +63,7 @@
 - Cohen's d is **not computed** in the source (landing page hard-codes `d = 0.83`, `79% → 91%`, `96%`). New `lib/calc/effect.ts` will compute pre/post (base vs after-improvement score per student): `d_z = mean(diff)/sd(diff)` and `d_av/pooled`; the landing stats become live numbers. Formula choice confirmed with the teacher (Decision 5).
 
 ### 1. Stack
+- Site/app name: **Itqan** — Vercel project `itqan` (URL `itqan.vercel.app`, fallback `itqan-edu.vercel.app` if taken), npm package `itqan`, `<title>` «Itqan | إتقان», PWA manifest name `Itqan`.
 - Next.js 15 (App Router, TypeScript, Server Components + Server Actions), Tailwind CSS 4, the source CSS tokens ported as CSS variables (colours `--low/--mid/--high/--gold/--line/--muted`…), Readex Pro self-hosted via `next/font/local` (same woff2 subsets that are embedded in the source).
 - Supabase: Postgres + Auth + Storage + RLS; `@supabase/ssr` for cookie sessions.
 - Anthropic API via `@anthropic-ai/sdk`, server-only (`ANTHROPIC_API_KEY`), model id from env `ITQAN_AI_MODEL` (default: current Sonnet), JSON outputs validated with zod.
