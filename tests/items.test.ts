@@ -52,3 +52,23 @@ describe("blueprint and trends", () => {
     expect(tr[1].classes["3/1"]).toBe(66.7);
   });
 });
+
+describe("distractors and bank history", () => {
+  it("counts the chosen options and flags a lure and an unused option", async () => {
+    const { distractors } = await import("@/lib/calc/items");
+    // key is ج (index 2). Strong students s1,s5 chose ج; s4 (weakest) chose ب; nobody chose د; أ chosen by the strong s2
+    const t2 = { id: "x", name: "", type: "p1", date: "", qs: [{ id: "a", skill: "k1", type: "mc" as const, text: "", opts: ["1", "2", "3", "4"], ans: 2 }],
+      results: { s1: [1], s2: [0], s3: [0], s4: [0], s5: [1] }, answers: { s1: ["ج"], s2: ["أ"], s3: ["ب"], s4: ["ب"], s5: ["C"] } };
+    const d = distractors(t2, ["s1", "s2", "s3", "s4", "s5"])[0]!;
+    expect(d.opts.map((o) => o.n)).toEqual([1, 2, 2, 0]);
+    expect(d.opts[3].flag).toBe("unused");
+    expect(d.opts[2].key).toBe(true);
+  });
+  it("averages a question's indices over the tests it appeared in", async () => {
+    const { bankStats } = await import("@/lib/calc/items");
+    const roster = ["s1", "s2", "s3", "s4", "s5"].map((id) => ({ id }));
+    const s = bankStats([t, { ...t, id: "t2" }], roster, 5);
+    expect(s.a).toEqual({ uses: 2, n: 10, p: 0.8, d: 1, flags: [] });
+    expect(bankStats([t], roster, 10)).toEqual({}); // too few students
+  });
+});

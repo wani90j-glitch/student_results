@@ -46,7 +46,8 @@ export async function GET() {
     if (!t.results[me]) { outTests[t.id] = { id: t.id, name: t.name, type: t.type, date: t.date, qs: [], results: {}, _n: n }; return; }
     const skillPct = (cls?: string) => Object.fromEntries(groupStats(ctx, t, cls).skills.map((k) => [k.id, k.pct]));
     gapPre[t.id] = { cls: gapTarget(ctx, t, meRow.cls, cfg, "cls"), all: gapTarget(ctx, t, meRow.cls, cfg, "all"), skills: { cls: skillPct(meRow.cls), all: skillPct() } };
-    outTests[t.id] = { ...t, qs: t.qs.map(strip), results: { [me]: t.results[me] }, _n: n };
+    const { answers: _a, ...rest } = t; void _a; // other students' chosen options never leave the server
+    outTests[t.id] = { ...rest, qs: t.qs.map(strip), results: { [me]: t.results[me] }, _n: n };
   });
   const outImps: Record<string, any> = {};
   Object.values(full.imps).forEach((m: any) => {

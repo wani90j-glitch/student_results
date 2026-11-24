@@ -68,6 +68,8 @@ describe.skipIf(!hasSource())("round trip", () => {
     const { rowsToState } = await import("@/lib/data/mapping");
     const L = loadLegacy();
     const ex = syntheticExport(L);
+    const sids = Object.keys((ex.tests as any).t_main.results).slice(0, 2);
+    (ex.tests as any).t_main.answers = Object.fromEntries(sids.map((sid) => [sid, (ex.tests as any).t_main.qs.map((_: unknown, i: number) => (i % 3 ? "ب" : null))]));
     const out = transform(ex, { schoolId: SCHOOL, teacherId: TEACHER, pin: () => ({ lookup: "x", hash: "y" }) }).rows as any;
     const st = rowsToState({ ...out, school: out.schools[0], teacher: out.teachers[0] });
     expect(st.roster).toEqual(ex.roster.map(({ nid, ...s }) => s));

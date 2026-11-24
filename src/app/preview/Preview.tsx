@@ -18,7 +18,7 @@ export default function Preview() {
         whoAmI: async () => (role === "none" ? null : { role, sid: role === "student" ? data.roster[3].id : null }),
         publicStats: async () => ({ n: 39, meanPctBefore: 68.2, meanPctAfter: 80.1, sdBefore: 3.1, sdAfter: 2.2, improvedPct: 90, settings: { school: data.settings.school } }),
         load: async () => JSON.parse(JSON.stringify(data)),
-        hydrate: async () => {}, signedUrls: async () => ({}), matchPins: async (pins: string[]) => Object.fromEntries(pins.filter((x) => x.startsWith("19000000")).map((x) => [x, data.roster[+x.slice(-2)].id])), setPins: async () => ({ saved: 1, duplicates: [] }),
+        hydrate: async () => {}, signedUrls: async () => ({}), auditLog: async () => [{ at: "2026-10-20T09:12:00Z", actor_role: "teacher", entity: "test_results", action: "update", test_id: "t_main", student_id: data.roster[0].id, detail: { changed: [[5, 0, 1]], from: 14, to: 15 } }], matchPins: async (pins: string[]) => Object.fromEntries(pins.filter((x) => x.startsWith("19000000")).map((x) => [x, data.roster[+x.slice(-2)].id])), setPins: async () => ({ saved: 1, duplicates: [] }),
         signIn: async () => ({ mfa: false }), signOut: async () => {}, studentLogin: async () => ({ sid: data.roster[3].id }),
         uploadSheet: async () => ["x/student/s/k/1.jpg"], uploadSubmission: async () => "p", submitTask: async () => ({ total: 3, scores: [], fb: "", good: [], next: [] }),
         mfaEnroll: async () => ({ id: "f", qr: "", secret: "S" }), mfaVerify: async () => {}, mfaDisable: async () => {}, changePassword: async () => {}, resetPassword: async () => {},

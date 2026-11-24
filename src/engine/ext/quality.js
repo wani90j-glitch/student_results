@@ -39,7 +39,7 @@ function vQuality() {
   if (!t || !Object.keys(t.results || {}).length) return `<section class="card"><h2>الجودة والاعتماد</h2><p class="muted">يظهر التقرير بعد إدخال نتائج اختبار واحد على الأقل.</p></section>`;
   const cls = S.ui.cls || "", k = kpiCfg(), ctx = ctxNow(), g = groupStats(t, cls), tot = testMax(t);
   const sids = sortedStudents(cls).filter((s) => t.results[s.id]).map((s) => s.id);
-  const ia = itemAnalysis(t, sids), bp = blueprint(ctx, t), tr = trends(ctx, Object.values(S.tests), classes());
+  const ia = itemAnalysis(t, sids), dxs = distractors(t, sids), bp = blueprint(ctx, t), tr = trends(ctx, Object.values(S.tests), classes());
   const mastered = (list) => list.filter((x) => pct(x.score, x.total) >= k.crit).length;
   const lvP = (L, after) => (g.levels[L].t ? pct(after ? g.levels[L].c : g.levels[L].c0, g.levels[L].t) : null);
   const ms = impsOf(t.id).filter((m) => Object.keys(m.results || {}).length), sent = (fn) => sids.filter((id) => fn(sentOf(id, t.id))).length;
@@ -57,7 +57,7 @@ function vQuality() {
     g.lost ? row("الدرجات المفقودة التي استُعيدت بالتحسين", `${pct(g.rec, g.lost)}%`, "—", "", "مؤشر على فاعلية التقويم التكويني والعلاج") : "",
     row("اطلاع أولياء الأمور على التقرير", `${pct(seenN, g.n)}%`, "—", "", `${seenN} من ${g.n}`),
     row("خطة علاجية أو إثرائية أُرسلت", `${pct(sent((o) => o.plan), g.n)}%`, "100%", st3(pct(sent((o) => o.plan), g.n), 100, 10)),
-    row("معامل ثبات الاختبار (ألفا كرونباخ / KR-20)", ia.alpha == null ? "—" : fmt(ia.alpha), "0.7", ia.alpha == null ? "" : st3(ia.alpha * 100, 70, 10)),
+    row("معامل ثبات الاختبار (ألفا كرونباخ / KR-20)", ia.alpha == null ? "—" : f2(ia.alpha), "0.7", ia.alpha == null ? "" : st3(ia.alpha * 100, 70, 10)),
     nat != null ? row(`المقارنة بالمعيار المرجعي${k.nationalLabel ? " (" + esc(k.nationalLabel) + ")" : ""}`, `${pct(g.mean0, tot)}%`, `${fmt(nat)}%`, st3(pct(g.mean0, tot), nat), "متوسط المدرسة مقابل المعيار الذي أدخلتِه") : "",
   ].join("");
 
@@ -66,7 +66,7 @@ function vQuality() {
 
   const flagged = ia.items.filter((x) => x.flags.length);
   const v = (x) => ITEM_VERDICT[x.flags.includes("negDisc") ? "negDisc" : x.flags[0] || "ok"];
-  const itemRows = ia.items.map((x) => { const s = sk(x.skill) || {}, [c, l, act] = v(x); return `<tr><td class="num">${x.i + 1}</td><td>${esc(s.name || "")}<br><small class="muted">${LEVELS[s.level] || ""}</small></td><td class="num">${fmt(x.p)}</td><td class="num">${x.d == null ? "—" : fmt(x.d)}</td><td class="num">${x.r == null ? "—" : fmt(x.r)}</td><td class="num">${x.alphaIfDeleted == null ? "—" : fmt(x.alphaIfDeleted)}</td><td><span class="pill ${c}">${l}</span><br><small class="muted">${act}</small></td></tr>`; }).join("");
+  const itemRows = ia.items.map((x) => { const s = sk(x.skill) || {}, [c, l, act] = v(x); return `<tr><td class="num">${x.i + 1}</td><td>${esc(s.name || "")}<br><small class="muted">${LEVELS[s.level] || ""}</small></td><td class="num">${f2(x.p)}</td><td class="num">${x.d == null ? "—" : f2(x.d)}</td><td class="num">${x.r == null ? "—" : f2(x.r)}</td><td class="num">${x.alphaIfDeleted == null ? "—" : f2(x.alphaIfDeleted)}</td>${optCell(dxs[x.i], t.qs[x.i])}<td><span class="pill ${c}">${l}</span><br><small class="muted">${act}</small></td></tr>`; }).join("");
 
   const trRows = tr.map((r) => `<tr><td>${esc(r.name)}<br><small class="muted">${esc(r.date)} · ${r.n} طالبة</small></td><td class="num">${r.before}%</td><td class="num">${r.after !== r.before ? r.after + "%" : "—"}</td>${["K", "A", "R"].map((L) => `<td class="num">${r.levels[L] == null ? "—" : r.levels[L] + "%"}</td>`).join("")}<td class="num">${r.masteredShare}%</td></tr>`).join("");
   const clsTrend = classes().length > 1 && tr.length > 1 ? `<div class="scroll"><table class="tbl"><thead><tr><th>الفصل</th>${tr.map((r) => `<th>${esc(r.name)}</th>`).join("")}</tr></thead><tbody>${classes().map((c) => `<tr><td>فصل ${esc(c)}</td>${tr.map((r) => `<td class="num">${r.classes[c] == null ? "—" : r.classes[c] + "%"}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : "";
@@ -86,10 +86,10 @@ function vQuality() {
     <div class="scroll"><table class="tbl"><thead><tr><th>المستوى المعرفي</th><th>الدرجات</th><th>النسبة في الاختبار</th><th>المستهدف</th><th>المواءمة</th></tr></thead><tbody>${lvRows}</tbody></table></div>
     <div class="scroll"><table class="tbl"><thead><tr><th>الفصل (الوحدة)</th><th>الدرجات</th><th>معرفة / تطبيق / استدلال</th><th>المهارات المقيسة</th><th>تغطية نواتج التعلم</th></tr></thead><tbody>${chRows}</tbody></table></div></section>
   <section class="card"><h2>3. ثبات الاختبار وجودة الأسئلة</h2>
-    <div class="grid4"><div class="tile"><b>${ia.alpha == null ? "—" : fmt(ia.alpha)}</b><span>معامل الثبات (ألفا / KR-20)</span></div><div class="tile"><b>${ia.sem == null ? "—" : fmt(ia.sem)}</b><span>الخطأ المعياري للقياس (من ${fmt(ia.total)})</span></div><div class="tile"><b>${fmt(ia.meanP)}</b><span>متوسط معامل السهولة</span></div><div class="tile"><b>${flagged.length}</b><span>سؤالًا يحتاج مراجعة من ${ia.k}</span></div></div>
-    <p class="note ${alphaBand(ia.alpha) === "low" ? "warn" : alphaBand(ia.alpha) === "high" ? "ok" : ""}">${ALPHA_TXT[alphaBand(ia.alpha)]}${ia.sem != null ? ` درجة الطالبة الحقيقية تقع غالبًا بين درجتها ناقص ${fmt(ia.sem)} وزائد ${fmt(ia.sem)}.` : ""}${ia.n < 20 ? ` (الحساب على ${ia.n} طالبة فقط؛ يصبح أدق مع 20 طالبة فأكثر.)` : ""}</p>
-    <details class="sheet"${flagged.length ? " open" : ""}><summary>تحليل كل سؤال (${ia.k})</summary><div class="scroll"><table class="tbl"><thead><tr><th>السؤال</th><th>المهارة</th><th>السهولة</th><th>التمييز</th><th>الارتباط بالدرجة</th><th>الثبات لو حُذف</th><th>الحكم والإجراء</th></tr></thead><tbody>${itemRows}</tbody></table></div>
-    <p class="muted small">السهولة: نسبة الدرجة المتحققة في السؤال (المناسب 0.2–0.9). التمييز: الفرق بين أعلى 27% وأدنى 27% من الطالبات (0.2 فأكثر جيد، والسالب يستدعي مراجعة المفتاح). الثبات لو حُذف: إن ارتفع عن ${ia.alpha == null ? "معامل الثبات" : fmt(ia.alpha)} فالسؤال يُضعف الاختبار. التحليل على الدرجات الأولى قبل اختبارات التحسين.</p></details></section>
+    <div class="grid4"><div class="tile"><b>${ia.alpha == null ? "—" : f2(ia.alpha)}</b><span>معامل الثبات (ألفا / KR-20)</span></div><div class="tile"><b>${ia.sem == null ? "—" : f2(ia.sem)}</b><span>الخطأ المعياري للقياس (من ${fmt(ia.total)})</span></div><div class="tile"><b>${f2(ia.meanP)}</b><span>متوسط معامل السهولة</span></div><div class="tile"><b>${flagged.length}</b><span>سؤالًا يحتاج مراجعة من ${ia.k}</span></div></div>
+    <p class="note ${alphaBand(ia.alpha) === "low" ? "warn" : alphaBand(ia.alpha) === "high" ? "ok" : ""}">${ALPHA_TXT[alphaBand(ia.alpha)]}${ia.sem != null ? ` درجة الطالبة الحقيقية تقع غالبًا بين درجتها ناقص ${f2(ia.sem)} وزائد ${f2(ia.sem)}.` : ""}${ia.n < 20 ? ` (الحساب على ${ia.n} طالبة فقط؛ يصبح أدق مع 20 طالبة فأكثر.)` : ""}</p>
+    <details class="sheet"${flagged.length ? " open" : ""}><summary>تحليل كل سؤال (${ia.k})</summary><div class="scroll"><table class="tbl"><thead><tr><th>السؤال</th><th>المهارة</th><th>السهولة</th><th>التمييز</th><th>الارتباط بالدرجة</th><th>الثبات لو حُذف</th><th>البدائل (عدد من اختارت كلًّا)</th><th>الحكم والإجراء</th></tr></thead><tbody>${itemRows}</tbody></table></div>
+    <p class="muted small">السهولة: نسبة الدرجة المتحققة في السؤال (المناسب 0.2–0.9). التمييز: الفرق بين أعلى 27% وأدنى 27% من الطالبات (0.2 فأكثر جيد، والسالب يستدعي مراجعة المفتاح). الثبات لو حُذف: إن ارتفع عن ${ia.alpha == null ? "معامل الثبات" : f2(ia.alpha)} فالسؤال يُضعف الاختبار. التحليل على الدرجات الأولى قبل اختبارات التحسين. البدائل تظهر عند التصحيح بملف إكسل أو بالتصوير (حيث تُحفظ الإجابة المختارة)؛ البديل الذي لا يختاره أحد لا يعمل، والذي يجذب المتفوقات يحتاج مراجعة. تُحفظ سهولة كل سؤال وتمييزه في بنك الأسئلة لتختاري للاختبارات القادمة أسئلة جودتها مثبتة.</p></details></section>
   <section class="card"><h2>4. الاتجاهات عبر الاختبارات (للتخطيط)</h2>
     ${lineChart(tr, [{ key: "before", label: "متوسط الإتقان في الاختبار", col: "#1f5e57" }, { key: "after", label: "بعد التحسين", col: "#c9962b", dash: "6 4" }])}
     <div class="scroll"><table class="tbl"><thead><tr><th>الاختبار</th><th>الإتقان</th><th>بعد التحسين</th><th>${LEVELS.K}</th><th>${LEVELS.A}</th><th>${LEVELS.R}</th><th>المتقنات</th></tr></thead><tbody>${trRows}</tbody></table></div>${clsTrend}
@@ -102,7 +102,9 @@ function vQuality() {
     <tr><td>أوراق اختبار بنتيجة كل سؤال أُرسلت لأولياء الأمور</td><td class="num"><b>${papersSent}</b></td></tr>
     <tr><td>ملاحظات متبادلة مع أولياء الأمور</td><td class="num"><b>${notesN}</b></td></tr>
     <tr><td>أسئلة في البنك مربوطة بمهارة ومستوى</td><td class="num"><b>${S.bank.length}</b></td></tr>
-    <tr><td>مهارات (نواتج تعلّم) معرَّفة بمستوياتها</td><td class="num"><b>${S.skills.length}</b></td></tr></tbody></table></div></section>
+    <tr><td>مهارات (نواتج تعلّم) معرَّفة بمستوياتها</td><td class="num"><b>${S.skills.length}</b></td></tr>
+    <tr><td>قيود في سجل التعديلات (كل الاختبارات)</td><td class="num"><b>${S.audit ? S.audit.list.length : "…"}</b></td></tr></tbody></table></div></section>
+  ${auditSection(t)}
   <section class="card noprint"><h2>المستهدفات والمعيار المرجعي</h2><form id="kpiForm" class="grid2">
     <label class="fld">محك الإتقان %<input id="kp_crit" type="number" min="1" max="100" value="${k.crit}"></label>
     <label class="fld">نسبة الطالبات المتقنات المستهدفة %<input id="kp_share" type="number" min="1" max="100" value="${k.share}"></label>

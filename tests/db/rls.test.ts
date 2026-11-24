@@ -137,3 +137,25 @@ describe("teacher saves from the browser", () => {
     });
   });
 });
+
+describe("audit log", () => {
+  it("records who changed which question, only on real changes, and cannot be altered", async () => {
+    await as(db, T1, async (q) => {
+      const before = (await q("select count(*)::int n from audit_log"))[0].n;
+      await q("update test_results set marks = '{1,0}' where test_id = 't1' and student_id = 's_a'"); // same marks
+      expect((await q("select count(*)::int n from audit_log"))[0].n).toBe(before);
+      await q("update test_results set marks = '{1,1}' where test_id = 't1' and student_id = 's_a'");
+      const log = await q("select * from audit_log where entity = 'test_results' and action = 'update' order by id desc limit 1");
+      expect(log[0].actor).toBe(T1);
+      expect(log[0].actor_role).toBe("teacher");
+      expect(log[0].student_id).toBe("s_a");
+      expect(log[0].detail.changed).toEqual([[2, 0, 1]]);
+      expect([+log[0].detail.from, +log[0].detail.to]).toEqual([1, 2]);
+      await expect(q("delete from audit_log")).rejects.toThrow();
+      await expect(q("update audit_log set detail = '{}'")).rejects.toThrow();
+      await expect(q(`insert into audit_log (school_id, entity, action) values ('${SC1}','x','y')`)).rejects.toThrow();
+    });
+    await as(db, U_A, async (q) => { expect(await q("select * from audit_log")).toEqual([]); });
+    await as(db, T2, async (q) => { expect(await q(`select * from audit_log where teacher_id <> '${T2}'`)).toEqual([]); });
+  });
+});

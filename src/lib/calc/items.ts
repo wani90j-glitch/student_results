@@ -103,3 +103,62 @@ export function trends(ctx: Ctx, tests: Test[], classes: string[]) {
     return { id: t.id, name: t.name, date: t.date, n: g.n, before: pct(g.mean0, tot), after: pct(g.mean, tot), levels: lv, classes: cls, masteredShare: g.n ? Math.round((g.students.filter((x) => x.score / x.total >= 0.8).length / g.n) * 1000) / 10 : 0 };
   });
 }
+
+/* ---------- distractor analysis: which option each student chose (from Excel files and photographed sheets) ---------- */
+import { answerIndex } from "./marks";
+
+export interface OptionStat { k: number; n: number; upper: number; lower: number; key: boolean; flag: "" | "unused" | "lure" }
+/** Per objective question: how many chose each option, overall and in the upper / lower 27%. Null when no answers were recorded. */
+export function distractors(t: Test & { answers?: Record<string, (string | null)[]> }, sids: string[]) {
+  const ans = t.answers || {};
+  const ids = sids.filter((id) => t.results?.[id]);
+  const totals = new Map(ids.map((id) => [id, t.qs.reduce((a, q, i) => a + Math.min(qMax(q), +t.results[id][i] || 0), 0)]));
+  const order = ids.slice().sort((a, b) => totals.get(b)! - totals.get(a)! || ids.indexOf(a) - ids.indexOf(b));
+  const g = Math.max(1, Math.round(ids.length * 0.27)), up = new Set(order.slice(0, g)), lo = new Set(order.slice(-g));
+  return t.qs.map((q, i) => {
+    if (q.type !== "mc" && q.type !== "tf") return null;
+    const nOpt = q.type === "tf" ? 2 : Math.max(2, (q.opts || []).length || 4);
+    const opts: OptionStat[] = Array.from({ length: nOpt }, (_, k) => ({ k, n: 0, upper: 0, lower: 0, key: k === (q.ans || 0), flag: "" as const }));
+    let seen = 0, blank = 0;
+    ids.forEach((id) => {
+      const raw = ans[id]?.[i];
+      if (raw == null) return;
+      const k = answerIndex(raw, q);
+      seen++;
+      if (k == null || k >= nOpt) { blank++; return; }
+      opts[k].n++; if (up.has(id)) opts[k].upper++; if (lo.has(id)) opts[k].lower++;
+    });
+    if (!seen) return null;
+    opts.forEach((o) => { if (!o.key) o.flag = o.n === 0 ? "unused" : o.upper > o.lower ? "lure" : ""; });
+    return { i, seen, blank, opts };
+  });
+}
+
+/* ---------- quality history of each bank question across every test it appeared in ---------- */
+export interface BankStat { uses: number; n: number; p: number; d: number | null; flags: ItemStat["flags"] }
+/** Tests with fewer than `minN` students are ignored (too few for stable indices). Weighted by the number of students. */
+export function bankStats(tests: Test[], roster: { id: string }[], minN = 10) {
+  const acc = new Map<string, { uses: number; n: number; p: number; d: number; dn: number }>();
+  const ids = roster.map((s) => s.id);
+  tests.forEach((t) => {
+    const n = ids.filter((id) => t.results?.[id]).length;
+    if (n < minN) return;
+    itemAnalysis(t, ids).items.forEach((it) => {
+      const a = acc.get(it.id) || { uses: 0, n: 0, p: 0, d: 0, dn: 0 };
+      a.uses++; a.n += n; a.p += it.p * n;
+      if (it.d != null) { a.d += it.d * n; a.dn += n; }
+      acc.set(it.id, a);
+    });
+  });
+  const out: Record<string, BankStat> = {};
+  acc.forEach((a, id) => {
+    const p = Math.round((a.p / a.n) * 100) / 100, d = a.dn ? Math.round((a.d / a.dn) * 100) / 100 : null;
+    const flags: ItemStat["flags"] = [];
+    if (p > 0.9) flags.push("easy"); if (p < 0.2) flags.push("hard");
+    if (d != null && d < 0) flags.push("negDisc"); else if (d != null && d < 0.2) flags.push("lowDisc");
+    out[id] = { uses: a.uses, n: a.n, p, d, flags };
+  });
+  return out;
+}
+/** Sort key for building tests: proven good questions first, untested next, flagged last. */
+export const qualityRank = (s?: BankStat) => (!s ? 1 : s.flags.length ? 2 : 0);

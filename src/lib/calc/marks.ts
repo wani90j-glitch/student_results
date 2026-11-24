@@ -33,3 +33,20 @@ export function markOf(v: unknown, q: Question): number | null {
   const yes = /^(✓|✔|صح|صحيح|ص|a|true)$/i.test(s), no = /^(✗|✘|x|×|خطأ|خطا|خ|b|false)$/i.test(s);
   return yes || no ? ((yes ? 0 : 1) === q.ans ? 1 : 0) : null;
 }
+
+/** Which option a read answer points to: 0–3 for multiple choice (أ ب ج د / A B C D), 0 = true / 1 = false for true–false; null when unknown. */
+export function answerIndex(v: unknown, q: Question): number | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  if (q.type === "mc") {
+    let k = LETTERS.indexOf(s.replace(/^[إآا]$/, "أ"));
+    if (k < 0) k = "ABCD".indexOf(s.toUpperCase());
+    return k < 0 ? null : k;
+  }
+  if (q.type === "tf") {
+    if (/^(✓|✔|صح|صحيح|ص|a|true)$/i.test(s)) return 0;
+    if (/^(✗|✘|x|×|خطأ|خطا|خ|b|false)$/i.test(s)) return 1;
+  }
+  return null;
+}

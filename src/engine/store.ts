@@ -348,6 +348,12 @@ export function createStore() {
       if (!r.ok) throw { code: j.error || "error", message: j.error === "rate_limited" ? "محاولات كثيرة اليوم. حاولي غدًا." : "تعذّر تسليم العمل. حاولي مرة أخرى." };
       return j.ev;
     },
+    /** The audit log (read-only for the teacher, newest first). */
+    async auditLog() {
+      const { data, error } = await sb.from("audit_log").select("at, actor_role, entity, action, test_id, student_id, detail").order("at", { ascending: false }).limit(2000);
+      if (error) throw error;
+      return data || [];
+    },
     /** Short-lived links for a list of stored files: {"bucket:path": url}. */
     async signedUrls(items: { bucket: string; path: string }[]) {
       if (!items.length) return {};
