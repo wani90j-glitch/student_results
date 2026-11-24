@@ -308,7 +308,7 @@ export function boot(Store) {{
   if (window.__itqanBooted) return; window.__itqanBooted = true;
   const DATA = {{ skills: [], bank: [], logos: {{}}, qimg: {{}} }};
 {code}
-  window.__itqan = {{ S, render, A }};
+  window.__itqan = {{ S, render, A, evalTask }};
 }}
 """
 open("src/engine/itqan.js", "w", encoding="utf-8").write(out)

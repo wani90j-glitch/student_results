@@ -181,7 +181,7 @@ A.tsSubmit = (el) => guard(async () => {
     const sub = { at: new Date().toISOString(), kind, name: f.name, size: f.size, note, th, path, dur: Math.round(dur) };
     say(`${IC.ai} يقيّم الذكاء الاصطناعي عملك حسب بنود التقييم…`);
     const blobs = []; for (const cv of frames) blobs.push(await toBlob(cv, 0.82));
-    const ev = await Store.submitTask({ sid, tid: null, taskId: st.rowId, sub, frames: blobs, kind, note, dur });
+    const ev = await Store.submitTask({ sid, tid: null, taskId: st.rowId, setId: T.id, sub, frames: blobs, kind, note, dur });
     Object.assign(st, { status: "submitted", ev, tg: null, subs: [...(st.subs || []), sub] });
     render();
   } finally { el.disabled = false; }
