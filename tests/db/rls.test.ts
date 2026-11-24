@@ -126,3 +126,14 @@ describe("file storage", () => {
     });
   });
 });
+
+describe("teacher saves from the browser", () => {
+  it("can upsert her roster rows but not move a student to another school", async () => {
+    await as(db, T1, async (q) => {
+      await q(`insert into students (id, school_id, teacher_id, class_id, seat_no, name, sort) values ('s_a','${SC1}','${T1}','${C1}',1,'طالبة أ',0)
+               on conflict (id) do update set name = excluded.name, seat_no = excluded.seat_no, sort = excluded.sort, class_id = excluded.class_id, school_id = excluded.school_id, teacher_id = excluded.teacher_id`);
+      expect((await q("select has_pin from students where id = 's_a'"))[0].has_pin).toBe(true);
+      await expect(q(`update students set school_id = '${SC2}' where id = 's_a'`)).rejects.toThrow();
+    });
+  });
+});

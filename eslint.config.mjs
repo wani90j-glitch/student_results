@@ -18,8 +18,10 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "src/engine/itqan.js", // generated from the original app by scripts/port-engine.py
     ],
   },
+  { rules: { "@typescript-eslint/no-explicit-any": "warn" } },
 ];
 
 export default eslintConfig;

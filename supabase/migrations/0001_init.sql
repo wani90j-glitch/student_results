@@ -48,6 +48,7 @@ create table public.students (
   name text not null,
   pin_lookup text unique,          -- HMAC-SHA256(PIN_PEPPER, pin), hex. The pin itself is never stored.
   pin_hash text,                   -- scrypt$salt$hash
+  has_pin boolean generated always as (pin_hash is not null) stored,
   auth_user_id uuid unique references auth.users (id) on delete set null,
   stars int not null default 0,
   sort int not null default 0,     -- roster order of the old app (improvement papers depend on it)
@@ -316,7 +317,7 @@ declare t text;
 begin
   foreach t in array array['classes','students','skills','questions','qimg','tests','test_results','improvement_rounds',
                            'improvement_items','sheets','sends','perf_tasks','behavior_events','class_groups'] loop
-    execute format('create policy %I on public.%I for all to authenticated using (teacher_id = app.my_teacher()) with check (teacher_id = app.my_teacher())', t || '_teacher', t);
+    execute format('create policy %I on public.%I for all to authenticated using (teacher_id = app.my_teacher()) with check (teacher_id = app.my_teacher() and school_id = app.my_school())', t || '_teacher', t);
   end loop;
 end $$;
 
@@ -359,14 +360,14 @@ create policy beh_self_seen on public.behavior_events for update to authenticate
 -- column grants below add a second lock on the secrets inside students.
 revoke all on all tables in schema public from anon;
 revoke select, update on public.students from authenticated;
-grant select (id, school_id, teacher_id, class_id, seat_no, name, stars, sort, auth_user_id, created_at) on public.students to authenticated;
+grant select (id, school_id, teacher_id, class_id, seat_no, name, stars, sort, has_pin, auth_user_id, created_at) on public.students to authenticated;
 grant insert (id, school_id, teacher_id, class_id, seat_no, name, sort) on public.students to authenticated;
 grant delete on public.students to authenticated;
 -- the PIN columns are written only by the server (service role) after hashing
 revoke update on public.teachers from authenticated;
 grant update (display_name, subject, grade, term, year, pfont, settings) on public.teachers to authenticated;
 revoke insert, delete on public.teachers from authenticated;
-grant update (class_id, seat_no, name, stars, sort) on public.students to authenticated;
+grant update (id, school_id, teacher_id, class_id, seat_no, name, stars, sort) on public.students to authenticated;
 -- a student may only stamp parent_seen_at on a shared behaviour note
 revoke update on public.behavior_events from authenticated;
 grant update (parent_seen_at, kind, type, note, date, shared) on public.behavior_events to authenticated;
