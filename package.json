@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "import:data": "tsx --env-file-if-exists=.env.local scripts/import.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

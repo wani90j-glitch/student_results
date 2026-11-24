@@ -50,6 +50,7 @@ create table public.students (
   pin_hash text,                   -- scrypt$salt$hash
   auth_user_id uuid unique references auth.users (id) on delete set null,
   stars int not null default 0,
+  sort int not null default 0,     -- roster order of the old app (improvement papers depend on it)
   created_at timestamptz not null default now()
 );
 create index on public.students (teacher_id);
@@ -349,14 +350,14 @@ create policy beh_self_seen on public.behavior_events for update to authenticate
 -- column grants below add a second lock on the secrets inside students.
 revoke all on all tables in schema public from anon;
 revoke select, update on public.students from authenticated;
-grant select (id, school_id, teacher_id, class_id, seat_no, name, stars, auth_user_id, created_at) on public.students to authenticated;
-grant insert (id, school_id, teacher_id, class_id, seat_no, name) on public.students to authenticated;
+grant select (id, school_id, teacher_id, class_id, seat_no, name, stars, sort, auth_user_id, created_at) on public.students to authenticated;
+grant insert (id, school_id, teacher_id, class_id, seat_no, name, sort) on public.students to authenticated;
 grant delete on public.students to authenticated;
 -- the PIN columns are written only by the server (service role) after hashing
 revoke update on public.teachers from authenticated;
 grant update (display_name, subject, grade, term, year, pfont, settings) on public.teachers to authenticated;
 revoke insert, delete on public.teachers from authenticated;
-grant update (class_id, seat_no, name, stars) on public.students to authenticated;
+grant update (class_id, seat_no, name, stars, sort) on public.students to authenticated;
 -- a student may only stamp parent_seen_at on a shared behaviour note
 revoke update on public.behavior_events from authenticated;
 grant update (parent_seen_at, kind, type, note, date, shared) on public.behavior_events to authenticated;

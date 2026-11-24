@@ -107,3 +107,22 @@ describe("teacher", () => {
     });
   });
 });
+
+describe("file storage", () => {
+  const path = (sid: string) => `${SC1}/student/${sid}/t1/page1.jpg`;
+  it("teacher can add files for her students only", async () => {
+    await as(db, T1, async (q) => {
+      await q(`insert into storage.objects (bucket_id, name) values ('sheets', '${path("s_a")}')`);
+    });
+    await as(db, T2, async (q) => {
+      await expect(q(`insert into storage.objects (bucket_id, name) values ('sheets', '${path("s_a")}')`)).rejects.toThrow();
+    });
+  });
+  it("student can upload task work only into her own folder, and cannot touch sheets", async () => {
+    await as(db, U_A, async (q) => {
+      await q(`insert into storage.objects (bucket_id, name) values ('submissions', '${path("s_a")}')`);
+      await expect(q(`insert into storage.objects (bucket_id, name) values ('submissions', '${path("s_b")}')`)).rejects.toThrow();
+      await expect(q(`insert into storage.objects (bucket_id, name) values ('sheets', '${path("s_a")}')`)).rejects.toThrow();
+    });
+  });
+});
