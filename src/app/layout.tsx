@@ -21,6 +21,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body>
+        {process.env.NEXT_PUBLIC_ITQAN_TRIAL_BANNER ? (
+          <div role="note" style={{ background: "#fdf2d8", color: "#5b3d00", borderBottom: "1px solid #e9cf8f", textAlign: "center", padding: "8px 16px", fontSize: ".9rem" }}>
+            {process.env.NEXT_PUBLIC_ITQAN_TRIAL_BANNER}
+          </div>
+        ) : null}
         {children}
         <Script src="/vendor/jspdf.umd.min.js" strategy="afterInteractive" />
         <Script src="/vendor/xlsx.full.min.js" strategy="afterInteractive" />
