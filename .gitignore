@@ -1,0 +1,10 @@
+# بيانات حقيقية وملفات خاصة: لا تُرفع أبدًا
+itqan-data-*.json
+itqan-source.html
+pins-*.csv
+data/
+.env
+.env.*
+!.env.example
+node_modules/
+.next/
