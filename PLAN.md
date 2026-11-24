@@ -22,7 +22,14 @@
 ### كل ما وجدته في الكود الحالي وسأنقله
 الرئيسية ولوحة المتابعة، والإنذار المبكر، و«الحصة الآن» مع الجدول الدراسي ونجوم الطالبات والمجموعات، والطالبات، والمهارات، وبنك الأسئلة (8 أنواع)، والاختبارات وأوراقها PDF وجدول المهارات وأوراق الإجابة (مربعات ودوائر)، والتصحيح (يدويًا أو بملف إكسل أو بالتصوير)، والتحليل وملخص القرار والتوزيع الطبيعي، وفجوة الأداء بمحكّاتها الثلاثة، واختبارات التحسين بجولاتها المتعددة، وأولياء الأمور والإرسال، والمهام الأدائية، والسلوك، وبيانات المدرسة، والعربية والإنجليزية، والجولة التعريفية.
 
-### ⚠️ قرارات أحتاجها منك قبل البدء (5 قرارات)
+### ✅ قرارات المعلمة (2026-11-24)
+1. المستودع **خاص (Private) الآن** مؤقتًا حتى التأكد من التشغيل، ثم قد يصبح عامًا لاحقًا. لذلك لا تُرفع بيانات حقيقية إلى GitHub في أي وقت.
+2. الرقم السري للطالبة = **رقم الهوية** كما هو اليوم، ويُحفظ مشفّرًا فقط (بصمة HMAC مع مفتاح سري خارج قاعدة البيانات + scrypt)، ولا يُحفظ الرقم نفسه ولا جزء منه.
+3. تُنقل **ميزات الذكاء الاصطناعي الثماني كلها**.
+4. المعلمة سترفع صور أوراق الإجابة بنفسها.
+5. **لا يُكتب «حجم الأثر» (d) في أي مكان.** يُعرض بدلًا منه **الانحراف المعياري SD** قبل التحسين وبعده، محسوبًا من البيانات.
+
+### (للأرشيف) القرارات كما طُرحت
 
 **1) مستودع GitHub عام (Public) الآن.** أي شخص في الإنترنت يستطيع قراءة الكود. لن أضع فيه أي بيانات طالبات أبدًا، لكني أنصح بشدة أن تجعليه **خاصًا (Private)**. إن وافقتِ فهذه خطوة واحدة سأشرحها لك. ولن أرفع ملف `itqan-source.html` إلى المستودع قبل أن يصبح خاصًا، لأن فيه اسمك واسم المدرسة وشعارها.
 
@@ -60,7 +67,7 @@
 - One-off legacy loaders (`importReal`, `REAL_QS`, `applyTests`, `fixRealQs`, `readStage`, `importSheetMap`, `FILE_SHEETS`, `SHEETDATA`, demo builder, `seedVer`/`lvlFix1` upgrades) are **not ported**: their effect is already materialised in the export.
 - Core maths (to port verbatim into `lib/calc/*`, pure TS functions):
   `pct` (1-dp rounding), `band` (<50 low, <80 mid, else high), `qMax`, `testMax`, `studentStats` (per-skill correct + recovered marks from improvement rounds, capped at skill total; levels K/A/R), `groupStats`, `roundScores` (scores after each improvement round k), `buildImprovement` (seeded RNG `seededRand(len*7919 + nResults)`, crit `lost|80|50`, unseen questions first), `risk` (early-warning points), `gapTarget/gapOf/gapSkills/gapCompare` (crit % / class mean / all-classes mean; `gapCls` thresholds 0 and −15), `distChart` stats (mean, population SD, normal pdf), `dashData`, `decisionCard` selections, `buildPlan` (rule-based remedial/enrichment text), `taskBase`, `markOf` (Arabic/Latin answer normalisation), `aiAcc`.
-- Cohen's d is **not computed** in the source (landing page hard-codes `d = 0.83`, `79% → 91%`, `96%`). New `lib/calc/effect.ts` will compute pre/post (base vs after-improvement score per student): `d_z = mean(diff)/sd(diff)` and `d_av/pooled`; the landing stats become live numbers. Formula choice confirmed with the teacher (Decision 5).
+- Effect size is **not shown anywhere** (teacher's decision). The landing page's hard-coded `d = 0.83` tile is replaced by the **standard deviation (SD) before → after improvement**, computed live with the same population SD used by `distChart`; `79% → 91%` and `96%` also become live numbers (`lib/calc/summary.ts`).
 
 ### 1. Stack
 - Site/app name: **Itqan** — Vercel project `itqan` (URL `itqan.vercel.app`, fallback `itqan-edu.vercel.app` if taken), npm package `itqan`, `<title>` «Itqan | إتقان», PWA manifest name `Itqan`.
@@ -68,6 +75,7 @@
 - Supabase: Postgres + Auth + Storage + RLS; `@supabase/ssr` for cookie sessions.
 - Anthropic API via `@anthropic-ai/sdk`, server-only (`ANTHROPIC_API_KEY`), model id from env `ITQAN_AI_MODEL` (default: current Sonnet), JSON outputs validated with zod.
 - PDF papers: keep the source canvas→jsPDF engine client-side (browser shapes Arabic correctly; works offline). Port `newDoc/text/wrap/header/paperQuestion/docPaper/docSpec/docSheets/docImprove/docDash` into `lib/pdf/*`.
+- Roster/Excel/AI-grading matching by national ID uses the same HMAC (`pin_lookup`), so the ID never needs to be stored.
 - Excel: SheetJS (`xlsx`) client-side for roster and results import.
 - Tests: Vitest (unit + parity), Playwright (smoke: login, student page, iPhone viewport).
 - Hosting: Vercel (HTTPS only, HSTS), region close to KSA (`fra1`/`me-central` if available); Supabase project region `eu-central-1` or `me-central-1` if offered (PDPL: prefer in-region; document the choice).
@@ -153,12 +161,12 @@ Streaming for long text (`teach`, `plan`). Per-teacher daily quota in `ai_jobs`.
 
 ### 8. Migration (`scripts/import.ts`)
 - `pnpm import ./itqan-data-YYYY-MM-DD.json` using `SUPABASE_SERVICE_ROLE_KEY` locally only; the file is git-ignored and never logged (script prints counts and IDs only).
-- Steps: school + teacher (by email arg) → subjects → skills → questions (+ `qimg` data URIs → Storage) → classes (from `cls`) → students (same IDs; PIN per Decision 2: hash `nid` or generate new PINs and write `pins-<date>.csv` locally for printing; `nid` is then discarded) → shadow auth users → tests + results → improvement rounds + items/results → acks (seen / notes / sent / sheet / beh / task) → behaviour → sheets mapping (asset IDs recorded; files attached by `scripts/import-sheets.ts` from a folder or artifact pull — Decision 4).
+- Steps: school + teacher (by email arg) → subjects → skills → questions (+ `qimg` data URIs → Storage) → classes (from `cls`) → students (same IDs; PIN = national ID per Decision 2: store `pin_lookup = HMAC(PIN_PEPPER, nid)` + scrypt `pin_hash`, the `nid` itself is discarded) → shadow auth users → tests + results → improvement rounds + items/results → acks (seen / notes / sent / sheet / beh / task) → behaviour → sheets mapping (asset IDs recorded; files uploaded by the teacher are attached by `scripts/import-sheets.ts` from a local git-ignored folder).
 - Idempotent: every insert is `upsert … on conflict (id)`; derived IDs are deterministic (uuid v5 from source keys); shadow users looked up before create.
 - Ends with: counts per table vs JSON counts, and a spot-check of 3 students (old `studentStats` vs new: base, score, missing skills, levels) — printed as IDs and numbers only.
 
 ### 9. Tests and parity
-- `lib/calc` unit tests (Vitest) for `pct`, `band`, `qMax`, `studentStats`, `groupStats`, `roundScores`, `buildImprovement` (same seed → same paper), gaps (3 modes), `risk`, `markOf`, `buildPlan`, Cohen's d.
+- `lib/calc` unit tests (Vitest) for `pct`, `band`, `qMax`, `studentStats`, `groupStats`, `roundScores`, `buildImprovement` (same seed → same paper), gaps (3 modes), `risk`, `markOf`, `buildPlan`, SD/mean summary.
 - **Parity harness**: `tests/parity/legacy.ts` extracts the original functions from `itqan-source.html` at test time, runs them in a Node `vm` against the imported data, and asserts identical outputs for every student/test/round. The source and the data file are read from a git-ignored local path; CI runs the unit tests only with a synthetic fixture (no real data in CI).
 - Playwright smoke at iPhone 13 viewport: PIN login, «اختباراتي» numbering, sheet image visible.
 
@@ -166,7 +174,7 @@ Streaming for long text (`teach`, `plan`). Per-teacher daily quota in `ai_jobs`.
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (publishable), `SUPABASE_SERVICE_ROLE_KEY` (server only), `ANTHROPIC_API_KEY`, `ITQAN_AI_MODEL`, `PIN_PEPPER` (random 32 bytes), `APP_URL`.
 
 ### 11. Migration checklist
-- [ ] Decisions 1–5 answered
+- [x] Decisions 1–5 answered
 - [ ] Repo private; `.gitignore` blocks `itqan-data-*.json`, `itqan-source.html`, `pins-*.csv`, `.env*`
 - [ ] Scaffold, design tokens, Readex Pro, RTL layout, i18n
 - [ ] `lib/calc` ported + unit tests + parity harness
