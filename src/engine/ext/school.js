@@ -273,3 +273,21 @@ A.stInvite = () => guard(async () => {
   await Store.schoolInvite(e, $("#invR").value); S.members = null; render();
 }, T("أُرسلت الدعوة.", "Invitation sent."));
 A.stDecide = (el) => guard(async () => { await Store.schoolDecide(el.dataset.m, el.dataset.a); S.members = null; render(); }, T("تم.", "Done."));
+
+/* ---------- demo only: the teacher enters directly; the password is asked only to show the real (encrypted) names ---------- */
+if (Store.demoStaff) {
+  A.asTeacher = () => guard(async () => { A.close(); S.role = "teacher"; S.loaded = false; render(); await loadAll(); render(); window.scrollTo(0, 0); });
+  const _reveal0 = A.reveal;
+  A.reveal = (el) => {
+    if (S.ui.reveal || !Store.namesLocked || !Store.namesLocked()) return _reveal0(el);
+    modal(`<h3>${T("إظهار الأسماء", "Show names")}</h3><p class="muted">${T("الأسماء الحقيقية محفوظة مشفّرة في هذه الصفحة. اكتبي كلمة المرور لإظهارها.", "Real names are stored encrypted on this page. Enter the password to show them.")}</p>
+      <label class="fld">${T("كلمة المرور", "Password")}<input id="unlockPw" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"></label><small id="unlockErr" class="err"></small>
+      <div class="row end"><button class="btn ghost" data-act="close">${T("إلغاء", "Cancel")}</button><button class="btn" data-act="unlockNames">${T("إظهار", "Show")}</button></div>`);
+    setTimeout(() => { const i = $("#unlockPw"); if (i) i.focus(); }, 50);
+  };
+  A.unlockNames = () => guard(async () => {
+    const pw = (($("#unlockPw") || {}).value || "").trim();
+    if (!(await Store.unlockNames(pw))) { $("#unlockErr").textContent = T("كلمة المرور غير صحيحة.", "Wrong password."); return; }
+    A.close(); const sid = S.sid, peek = S.peek; await loadAll(); S.sid = sid; S.peek = peek; S.ui.reveal = true; render();
+  });
+}
