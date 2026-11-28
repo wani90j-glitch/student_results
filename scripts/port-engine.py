@@ -76,7 +76,7 @@ sub("""const done = testsSorted().filter((t) => t.results && Object.keys(t.resul
 
 # 4. landing page: live figures (standard deviation instead of an effect size), no demo ID hint
 sub("""<div class="hstats"><div><b dir="ltr">79% → 91%</b><span>متوسط 116 طالبة</span></div><div><b dir="ltr">d = 0.83</b><span>حجم أثر كبير</span></div><div><b dir="ltr">96%</b><span>ممن أُعيد اختبارهن تحسّنّ</span></div></div>""",
-    """${hstats()}""")
+    "")  # the teacher asked to remove the figures from the landing page
 sub("""function renderLanding() {""", """function hstats() {
   const p = S.pub;
   if (!p || !p.n) return "";
