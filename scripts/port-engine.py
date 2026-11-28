@@ -297,6 +297,12 @@ sub("""  ${decisionCard(t, g)}""", """  ${decisionCard(t, g)}${coachCard(t, g)}"
 sub("""${ewStudentCard(S.sid)}<section class="card">""", """${ewStudentCard(S.sid)}${setTasksStudent(S.sid)}<section class="card">""")
 sub("""${ewStudentCard(S.sid)}${behCard(S.sid)}""", """${ewStudentCard(S.sid)}${setTasksStudent(S.sid)}${behCard(S.sid)}""")
 sub("""${taskTeacher(sid, t)}""", """${taskTeacher(sid, t)}${setTasksMini(sid)}""")
+
+# 17. phase 2: school staff sign in with the same e-mail form, and leave with the same button
+sub("""      if (r && r.setup) { S.role = "teacher"; A.importOpen(true); return; }""",
+    """      if (r && r.setup) { S.role = "teacher"; A.importOpen(true); return; }
+      if (r && r.staff) { A.close(); S.role = "staff"; S.staffAs = r.staff; S.ui.stTab = null; S.loaded = false; render(); await loadAll(); render(); return; }""")
+sub("""S.role = null; S.sid = null; S.peek = false; S.ui = {};""", """S.role = null; S.sid = null; S.peek = false; S.ui = {}; S.staff = null; S.staffAs = null; S.teachers = null; S.members = null;""")
 import glob, os
 # libraries are served by the site itself (works offline-tolerant, no third-party script host)
 code = code.replace("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/", "/vendor/")

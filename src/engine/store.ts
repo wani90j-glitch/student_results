@@ -73,6 +73,27 @@ export function createStore() {
     return j;
   };
 
+  /** Staff read the school's data through Row Level Security: only teachers who joined the school, only the areas of their role. Read-only. */
+  async function loadStaff() {
+    const m = await api("/api/school/accept");
+    const mem = (m.memberships || []).find((x: any) => x.status === "active" && x.role !== "teacher");
+    if (!mem) throw new Error("auth");
+    own = null; // staff never write teacher data
+    const q = (t: string, cols = "*") => allRows(sb, t, {}, cols).catch(() => []);
+    const [school, teachers, subjects, classes, students, skills, tests, test_results, rounds, items, behavior_events, acks, notes] = await Promise.all([
+      sb.from("schools").select("*").eq("id", mem.school_id).single().then((r: any) => r.data),
+      q("teachers", "id, school_id, display_name, subject, grade"), q("subjects"), q("classes"), q("students", "id, school_id, teacher_id, class_id, seat_no, name, stars, sort, has_pin"),
+      q("skills"), q("tests"), q("test_results"), q("improvement_rounds"), q("improvement_items"), q("behavior_events"), q("acks"), q("notes"),
+    ]);
+    const st = rowsToState({ school, teacher: { id: "", school_id: mem.school_id, display_name: "" }, subjects, classes, students, skills, questions: [], qimg: [], tests, test_results, improvement_rounds: rounds, improvement_items: items, sheets: [], sends: [], perf_tasks: [], task_submissions: [], acks, notes, behavior_events, class_groups: [] } as any);
+    const tname = new Map(teachers.map((t: any) => [t.id, t]));
+    const cls = new Map(classes.map((c: any) => [c.id, c.teacher_id]));
+    st.roster.forEach((s: S) => { const r: any = students.find((x: any) => x.id === s.id); s._teacher = r?.teacher_id || cls.get(r?.class_id); });
+    Object.values(st.tests).forEach((t: any) => { const r: any = tests.find((x: any) => x.id === t.id); t._teacher = r?.teacher_id; t._subject = (tname.get(r?.teacher_id) as any)?.subject || ""; });
+    state = { ...st, staff: { role: mem.role, school: mem.schools, schoolId: mem.school_id }, teachers: teachers.map((t: any) => ({ id: t.id, name: t.display_name, subject: t.subject || "", grade: t.grade || "" })) };
+    return state;
+  }
+
   /* -------- writes by path (same paths as the original app) -------- */
   async function write(path: string, data: any) {
     if (!own) return;
@@ -257,6 +278,7 @@ export function createStore() {
       }
       const { data: { user } } = await sb.auth.getUser();
       if (!user) throw new Error("auth");
+      if (asRole === "staff") return loadStaff();
       const { data: teacher } = await sb.from("teachers").select("*").eq("id", user.id).single();
       own = { school_id: teacher.school_id, teacher_id: teacher.id };
       const f = { teacher_id: teacher.id };
@@ -279,6 +301,12 @@ export function createStore() {
       return { ...st, imps: st.imps };
     },
 
+    /* ---- school staff ---- */
+    parentCodes: (ids: string[]) => api("/api/parent-codes", { studentIds: ids }),
+    schoolMembers: () => api("/api/school/members"),
+    schoolInvite: (email: string, r: string) => api("/api/school/invite", { email, role: r }),
+    schoolDecide: (memberId: string, action: string) => api("/api/school/decide", { memberId, action }),
+
     /* ---- sign-in ---- */
     async studentLogin(pin: string) {
       const r = await fetch("/api/student-login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pin }) });
@@ -291,7 +319,13 @@ export function createStore() {
       if (error) throw { message: "البريد أو كلمة المرور غير صحيحة." };
       const { data: { user } } = await sb.auth.getUser();
       const { data: t } = await sb.from("teachers").select("id").eq("id", user!.id).maybeSingle();
-      if (!t) return { setup: true }; // first sign-in: the import screen decides (the server checks who may import)
+      if (!t) {
+        // school staff (principal, deputies, counselor): an active membership in a school
+        const m = await api("/api/school/accept").catch(() => ({ memberships: [] }));
+        const st = (m.memberships || []).find((x: any) => x.status === "active" && x.role !== "teacher");
+        if (st) return { staff: st.role };
+        return { setup: true }; // first sign-in: the import screen decides (the server checks who may import)
+      }
       const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
         const { data: f } = await sb.auth.mfa.listFactors();
