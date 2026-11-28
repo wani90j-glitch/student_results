@@ -67,12 +67,25 @@ ex.improve[m.id] = m;
 roster.forEach((s, k) => { if (t.results[s.id] && k % 5 < 3) ex.acks[s.id] = { id: s.id, seen: { [t.id]: "2026-10-22T10:00:00Z" }, notes: [] }; });
 
 const { rows } = transform(ex, { schoolId: "00000000-0000-0000-0000-000000000d01", teacherId: "00000000-0000-0000-0000-000000000d02", pin: () => ({ lookup: "x", hash: "y" }) });
+/**
+ * Names read from a grade-sheet PDF: the PDF stores the lam-alef ligature and the word Allah as glyphs, so the text can
+ * come out with "لا" as "ال" and "الله" as "هللا"; some cells also carry the next column's heading. General rules only
+ * (no names are written in this repository); anything else is corrected in the teacher's own data file.
+ */
+function fixPdfName(n: string) {
+  return n
+    .replace(/\s*الطالبات:.*$/, "")                 // a heading that leaked into the cell
+    .replace(/هللا/g, "الله")                         // the Allah glyph
+    .replace(/(^|\s)األ/g, "$1الأ")                   // "األ" at the start of a word is "الأ"
+    .replace(/(^|\s)ال(?=\s)/g, "$1آل")               // a lone "ال" before a family name is "آل"
+    .replace(/\s+/g, " ").trim();
+}
 const r: any = rows;
 const st = rowsToState({ ...r, school: r.schools[0], teacher: r.teachers[0] });
 st.roster.forEach((s: any) => (s.hasPin = true));
 if (REAL) { // real names, encrypted; the page decrypts them only with the teacher's password
   const pass = process.env.DEMO_PASSWORD; if (!pass || pass.length < 8) throw new Error("DEMO_PASSWORD (8+ characters) is required with REAL_GRADES");
-  const names = Object.fromEntries(Object.entries(realBy).map(([id, r]) => [id, r.name]));
+  const names = Object.fromEntries(Object.entries(realBy).map(([id, r]) => [id, fixPdfName(r.name)]));
   const salt = wc.getRandomValues(new Uint8Array(16)), iv = wc.getRandomValues(new Uint8Array(12));
   const base0 = await wc.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
   const key = await wc.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 250000, hash: "SHA-256" }, base0, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
