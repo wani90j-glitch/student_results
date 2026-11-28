@@ -82,6 +82,17 @@ renderLanding = function () {
         <div><b>${T("ثقافة التعلم بالمهارات", "A culture of skills-based learning")}</b><span>${T("حين تعرف الطالبة مهاراتها يتحول التعلم من سباق على الدرجات إلى رحلة نحو الإتقان.", "When students know their skills, learning turns from a race for grades into a journey towards mastery.")}</span></div>
       </div>
     </section>
+    <section class="mx-quote" aria-label="${T("حكمة", "Quote")}">
+      <div class="mx-quote-in">
+        <blockquote><p>${T("البيانات وحدها لا تغيّر التعليم… بل التربويون الذين يقرؤونها بحكمة.", "Data doesn’t change education — educators who read it wisely do.")}</p></blockquote>
+        <p class="mx-quote-sub">${T("وإتقان تجعل هذه القراءة سهلة: تحوّل أوراق الإجابة والدرجات إلى صورة واضحة للمهارات والفجوات، وقرار جاهز لكل طالبة، دون جداول معقدة ولا حسابات يدوية.", "Itqan makes that reading easy: it turns answer sheets and marks into a clear picture of skills and gaps, with a ready decision for every student — no complex spreadsheets, no manual calculations.")}</p>
+        <ul class="mx-quote-pts">
+          <li><b>${T("من الدرجة إلى القرار", "From mark to decision")}</b><span>${T("علاج أو دعم أو إثراء لكل طالبة، محسوبًا تلقائيًا.", "Remediation, support or enrichment for each student, worked out automatically.")}</span></li>
+          <li><b>${T("لوحات تُقرأ بنظرة", "Dashboards you read at a glance")}</b><span>${T("ألوان الإتقان، وخريطة المهارات، والإنذار المبكر بلغة واضحة.", "Mastery colours, a skills map and early warning in plain language.")}</span></li>
+          <li><b>${T("لكل دور ما يحتاجه", "Each role sees what it needs")}</b><span>${T("المعلمة والمديرة والوكيلة والموجهة ووليّ الأمر، كلٌّ بقدر ما يخصه.", "Teacher, principal, deputies, counsellor and parent: each sees only what concerns them.")}</span></li>
+        </ul>
+      </div>
+    </section>
     <section class="mx-sec" id="mx-roles"><h2>${T("الدخول إلى المنصة", "Sign in to the platform")}</h2><p class="muted">${T("اختاري صفتك في المدرسة.", "Choose your role in the school.")}</p>
       <div class="sp-roles">
         ${card("teacher", T("المعلمات", "Teachers"), T("المهارات، بنك الأسئلة، الاختبارات، التصحيح، التحليل، واختبارات التحسين.", "Skills, question bank, tests, marking, analysis and improvement tests."), "asTeacher")}

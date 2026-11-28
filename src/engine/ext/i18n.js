@@ -6,6 +6,7 @@ const I18N_NUM = /\d+(?:[.,]\d+)?/g;
 function enOne(core) {
   if (EN[core]) return EN[core];
   if (I18N[core]) return I18N[core];
+  for (const [rx, fn] of I18N_RX) { const m = rx.exec(core); if (m) return fn(m); }
   const nums = core.match(I18N_NUM);
   if (nums) { const tr = I18N[core.replace(I18N_NUM, "#")]; if (tr) { let i = 0; return tr.replace(/#/g, () => (i < nums.length ? nums[i++] : "#")); } }
   return null;
@@ -18,6 +19,7 @@ enText = function (t) {
     const parts = core.split(" · ").map((x) => enOne(x) || x);
     tr = parts.join(" · ");
   }
+  if (tr == null) { const m = /^(.*?)\s(\d+هـ – .+)$/.exec(core); if (m) { const tail = enOne(m[2]); if (tail) tr = enText(m[1]) + " " + tail; } }
   if (tr == null) { let out = core; EN_PHRASES.forEach(([a, b]) => { if (out.includes(a)) out = out.split(a).join(b); }); tr = out; }
   const lead = /^\s*/.exec(t)[0], trail = /\s*$/.exec(t)[0];
   return lead + tr + trail;
@@ -25,6 +27,8 @@ enText = function (t) {
 applyLang = function (root) {
   const en = S.lang === "en";
   document.documentElement.lang = en ? "en" : "ar"; document.documentElement.dir = en ? "ltr" : "rtl";
+  // the page shell may carry its own dir (the demo, the site layout): follow the language there too
+  for (const id of ["app", "modal", "toast"]) { const el = document.getElementById(id); if (el) el.dir = en ? "ltr" : "rtl"; }
   if (!en || !root) return;
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement && n.parentElement.closest(".cq .stem,.cq .opts,.pii,.skl>span,textarea,.thread,.todo b,[data-keep]") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
   const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);

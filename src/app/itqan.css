@@ -312,3 +312,9 @@ ul.plain{list-style:none;margin:8px 0 0;padding:0;columns:2 220px} ul.plain li{p
 @media (max-width:860px){.mx-links{display:none}.mx-hero{grid-template-columns:1fr;padding-top:36px}.mx-hero-art .mx-art{max-width:320px}.mx-award-in{grid-template-columns:1fr}.mx-medal{max-width:280px;justify-self:center}}
 @media (max-width:700px){.mx-vs{grid-template-columns:1fr}.mx-vs-arrow{transform:rotate(-90deg);justify-self:center}}
 @media (max-width:560px){.mx-tool span{display:none}.sp-roles{grid-template-columns:1fr}.sp-role i{width:44px;height:44px}.mx-figs{grid-template-columns:repeat(2,1fr);gap:18px}.mx-fig i{width:60px;height:60px;border-radius:18px}}
+.mx-quote{background:#f4f3e8;border-bottom:14px solid #6f8783}
+.mx-quote-in{max-width:1180px;margin:0 auto;padding:40px 16px 36px;display:grid;gap:14px}
+.mx-quote blockquote{margin:0;padding:0;border:0} .mx-quote blockquote p{margin:0;font-size:clamp(1.35rem,3vw,2.1rem);font-weight:700;line-height:1.45;color:#16403c}
+.mx-quote-sub{margin:0;font-size:clamp(1rem,1.6vw,1.15rem);line-height:1.9;color:#3d5550;max-width:75ch}
+.mx-quote-pts{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.mx-quote-pts li{background:#fff;border-radius:12px;padding:14px 16px;display:grid;gap:4px;border-inline-start:4px solid #c9962b} .mx-quote-pts b{color:#0e3f3c} .mx-quote-pts span{color:#45605b;font-size:.94rem;line-height:1.7}
