@@ -319,3 +319,5 @@ ul.plain{list-style:none;margin:8px 0 0;padding:0;columns:2 220px} ul.plain li{p
 .mx-quote-pts{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
 .mx-quote-pts li{background:#fff;border-radius:12px;padding:14px 16px;display:grid;gap:4px;border-inline-start:4px solid #c9962b} .mx-quote-pts b{color:#0e3f3c} .mx-quote-pts span{color:#45605b;font-size:.94rem;line-height:1.7}
 #modal{z-index:60} #toast{z-index:70} /* windows always above any page banner */
+.mx-quote-key{margin:0;font-size:clamp(1.1rem,2.2vw,1.45rem);font-weight:600;line-height:1.7;color:#0e3f3c;border-inline-start:5px solid #c9962b;padding-inline-start:14px}
+.priv .pii,.priv select.pii{filter:none} /* names are always shown */

@@ -303,6 +303,12 @@ sub("""      if (r && r.setup) { S.role = "teacher"; A.importOpen(true); return;
     """      if (r && r.setup) { S.role = "teacher"; A.importOpen(true); return; }
       if (r && r.staff) { A.close(); S.role = "staff"; S.staffAs = r.staff; S.ui.stTab = null; S.loaded = false; render(); await loadAll(); render(); return; }""")
 sub("""S.role = null; S.sid = null; S.peek = false; S.ui = {};""", """S.role = null; S.sid = null; S.peek = false; S.ui = {}; S.staff = null; S.staffAs = null; S.teachers = null; S.members = null;""")
+
+# 18. the teacher asked to remove "hide names": names are always shown (no button, no blur)
+sub("""<button class="btn sm ${S.ui.reveal ? "" : "ghost"}" data-act="reveal" aria-pressed="${S.ui.reveal ? "true" : "false"}">${EYE} ${S.ui.reveal ? "إخفاء الأسماء" : "إظهار الأسماء"}</button>""", "")
+sub("""  document.body.classList.toggle("priv", S.role === "teacher" && !S.ui.reveal && !peek);""", """  document.body.classList.remove("priv");""")
+sub("""فلا يظهر لأحد. الأسماء مموّهة حتى تضغطي «إظهار الأسماء».</p>""", """فلا يظهر لأحد.</p>""")
+sub("""<p class="muted">جولة من خمس خطوات تشرح الفكرة كاملة في نحو 90 ثانية، والأسماء مموّهة أثناءها.</p>""", """<p class="muted">جولة من خمس خطوات تشرح الفكرة كاملة في نحو 90 ثانية.</p>""")
 import glob, os
 # libraries are served by the site itself (works offline-tolerant, no third-party script host)
 code = code.replace("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/", "/vendor/")

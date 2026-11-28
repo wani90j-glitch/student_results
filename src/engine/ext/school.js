@@ -85,6 +85,7 @@ renderLanding = function () {
     <section class="mx-quote" aria-label="${T("حكمة", "Quote")}">
       <div class="mx-quote-in">
         <blockquote><p>${T("البيانات وحدها لا تغيّر التعليم… بل التربويون الذين يقرؤونها بحكمة.", "Data doesn’t change education — educators who read it wisely do.")}</p></blockquote>
+        <p class="mx-quote-key">${T("القيمة الحقيقية لا تكمن في معرفة الدرجة فحسب، بل في فهم دلالاتها وتوظيفها في تحسين الأداء.", "The real value lies not just in knowing the grade, but in understanding what it means and using it to improve performance.")}</p>
         <p class="mx-quote-sub">${T("وإتقان تجعل هذه القراءة سهلة: تحوّل أوراق الإجابة والدرجات إلى صورة واضحة للمهارات والفجوات، وقرار جاهز لكل طالبة، دون جداول معقدة ولا حسابات يدوية.", "Itqan makes that reading easy: it turns answer sheets and marks into a clear picture of skills and gaps, with a ready decision for every student — no complex spreadsheets, no manual calculations.")}</p>
         <ul class="mx-quote-pts">
           <li><b>${T("من الدرجة إلى القرار", "From mark to decision")}</b><span>${T("علاج أو دعم أو إثراء لكل طالبة، محسوبًا تلقائيًا.", "Remediation, support or enrichment for each student, worked out automatically.")}</span></li>
@@ -166,13 +167,13 @@ function renderStaff() {
   const logo = s.logo ? `<img class="slogo" src="${esc(s.logo)}" alt="">` : `<span class="mark">✓</span>`;
   app.innerHTML = `
   <header class="top"><div class="brand">${logo}<div><b>${T("إتقان", "Itqan")}</b><span data-keep>${esc(s.school)}</span></div></div>
-    <div class="who"><span>${rT(R)}</span><button class="btn sm ${S.ui.reveal ? "" : "ghost"}" data-act="reveal" aria-pressed="${S.ui.reveal ? "true" : "false"}">${EYE} ${S.ui.reveal ? T("إخفاء الأسماء", "Hide names") : T("إظهار الأسماء", "Show names")}</button><button class="btn ghost sm" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button><button class="btn ghost sm" data-act="logout">${T("خروج", "Sign out")}</button></div></header>
+    <div class="who"><span>${rT(R)}</span><button class="btn ghost sm" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button><button class="btn ghost sm" data-act="logout">${T("خروج", "Sign out")}</button></div></header>
   <nav class="tabs" aria-label="${rT(R)}">${R.tabs.map((k) => `<a href="#" data-act="stTab" data-k="${k}" class="${tab === k ? "on" : ""}">${tabT(k)}</a>`).join("")}</nav>
   ${S.loadError ? `<div class="note bad">${esc(S.loadError)}</div>` : ""}
   ${Store.demoStaff ? `<div class="note demo"><span>${T("<b>نسخة تجريبية.</b> تعرض اللوحة بيانات معلمة واحدة انضمت إلى المدرسة. في الموقع الحقيقي تظهر هنا كل معلمة تنضم.", "<b>Demo.</b> This dashboard shows one teacher who joined the school. On the real site every teacher who joins appears here.")}</span></div>` : ""}
   <div class="note">${T("لوحة للاطلاع فقط: لا تغيّر الدرجات ولا بيانات المعلمات. ولا تظهر فيها إلا بيانات المعلمات اللاتي انضممن إلى المدرسة.", "Read-only dashboard: it never changes marks or teachers' data, and shows only teachers who joined the school.")}</div>
   <main id="view">${({ overview: stOverview, academic: stAcademic, warning: stWarning, behavior: stBehavior, parents: stParents, staff: stStaff }[tab])()}</main>`;
-  document.body.classList.toggle("priv", !S.ui.reveal);
+  document.body.classList.remove("priv");
   document.body.classList.add("staff");
   applyLang(app);
 }
@@ -274,20 +275,20 @@ A.stInvite = () => guard(async () => {
 }, T("أُرسلت الدعوة.", "Invitation sent."));
 A.stDecide = (el) => guard(async () => { await Store.schoolDecide(el.dataset.m, el.dataset.a); S.members = null; render(); }, T("تم.", "Done."));
 
-/* ---------- demo only: the teacher enters directly; the password is asked only to show the real (encrypted) names ---------- */
+/* ---------- demo only: the real names are stored encrypted; the password is asked once when the teacher enters ---------- */
 if (Store.demoStaff) {
-  A.asTeacher = () => guard(async () => { A.close(); S.role = "teacher"; S.loaded = false; render(); await loadAll(); render(); window.scrollTo(0, 0); });
-  const _reveal0 = A.reveal;
-  A.reveal = (el) => {
-    if (S.ui.reveal || !Store.namesLocked || !Store.namesLocked()) return _reveal0(el);
-    modal(`<h3>${T("إظهار الأسماء", "Show names")}</h3><p class="muted">${T("الأسماء الحقيقية محفوظة مشفّرة في هذه الصفحة. اكتبي كلمة المرور لإظهارها.", "Real names are stored encrypted on this page. Enter the password to show them.")}</p>
+  const enterTeacher = () => guard(async () => { A.close(); S.role = "teacher"; S.loaded = false; render(); await loadAll(); render(); window.scrollTo(0, 0); });
+  A.asTeacher = () => {
+    if (!Store.namesLocked || !Store.namesLocked()) return enterTeacher();
+    modal(`<h3>${T("دخول المعلمة", "Teacher sign-in")}</h3><p class="muted">${T("أسماء الطالبات الحقيقية محفوظة مشفّرة في هذه الصفحة. اكتبي كلمة المرور لتظهر.", "Real student names are stored encrypted on this page. Enter the password to show them.")}</p>
       <label class="fld">${T("كلمة المرور", "Password")}<input id="unlockPw" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"></label><small id="unlockErr" class="err"></small>
-      <div class="row end"><button class="btn ghost" data-act="close">${T("إلغاء", "Cancel")}</button><button class="btn" data-act="unlockNames">${T("إظهار", "Show")}</button></div>`);
+      <div class="row end wrap"><button class="lnk" data-act="enterNoNames">${T("الدخول بأسماء مؤقتة", "Enter with placeholder names")}</button><button class="btn" data-act="unlockNames">${T("دخول", "Sign in")}</button></div>`);
     setTimeout(() => { const i = $("#unlockPw"); if (i) i.focus(); }, 50);
   };
+  A.enterNoNames = () => enterTeacher();
   A.unlockNames = () => guard(async () => {
     const pw = (($("#unlockPw") || {}).value || "").trim();
     if (!(await Store.unlockNames(pw))) { $("#unlockErr").textContent = T("كلمة المرور غير صحيحة.", "Wrong password."); return; }
-    A.close(); const sid = S.sid, peek = S.peek; await loadAll(); S.sid = sid; S.peek = peek; S.ui.reveal = true; render();
+    await enterTeacher();
   });
 }

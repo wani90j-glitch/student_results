@@ -742,7 +742,7 @@ function render() {
   app.innerHTML = `
   <header class="top">
     <div class="brand">${logo}<div><b>إتقان</b><span data-keep>${esc(s.school)}</span></div></div>
-    <div class="who">${S.role === "teacher" ? `<span data-keep>${esc(s.teacher)}</span>${S.roster.length ? `<button class="btn sm ghost" data-act="pickStu">صفحة الطالبة</button>` : ""}<button class="btn sm ${S.ui.reveal ? "" : "ghost"}" data-act="reveal" aria-pressed="${S.ui.reveal ? "true" : "false"}">${EYE} ${S.ui.reveal ? "إخفاء الأسماء" : "إظهار الأسماء"}</button>` : ""}<button class="btn ghost sm" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button><button class="btn ghost sm" data-act="logout">خروج</button></div>
+    <div class="who">${S.role === "teacher" ? `<span data-keep>${esc(s.teacher)}</span>${S.roster.length ? `<button class="btn sm ghost" data-act="pickStu">صفحة الطالبة</button>` : ""}` : ""}<button class="btn ghost sm" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button><button class="btn ghost sm" data-act="logout">خروج</button></div>
   </header>
   ${peek ? `<div class="note peek"><span><b>أنتِ تعاينين صفحة الطالبة ووليّ الأمر</b> كما تظهر لهما تمامًا.</span><span class="row"><button class="btn sm ghost" data-act="pickStu" style="background:#fff">طالبة أخرى</button><button class="btn sm" data-act="unpeek">عودة إلى صفحة المعلمة</button></span></div>` : S.role === "teacher" ? `<nav class="tabs" aria-label="أقسام المنصة">${NAV.map(([k, l]) => `<a href="#${k}" class="${r === k ? "on" : ""}">${l}</a>`).join("")}</nav>` : ""}
   ${S.loadError ? `<div class="note bad">${esc(S.loadError)}</div>` : ""}
@@ -753,7 +753,7 @@ function render() {
   const fn = { live: vLive, home: vHome, students: vStudents, skills: vSkills, bank: vBank, tests: vTests, analysis: vAnalysis, improve: vImprove, parents: vParents, behavior: vBehavior, school: vSchool, portal: vPortal, quality: vQuality, tasks: vTasksM }[r] || vHome;
   v.innerHTML = fn();
   Store.hydrate(app);
-  document.body.classList.toggle("priv", S.role === "teacher" && !S.ui.reveal && !peek);
+  document.body.classList.remove("priv");
   applyLang(app);
 }
 A.peek = (el) => { S.peek = true; S.sid = el.dataset.s; A.close(); render(); window.scrollTo(0, 0); };
@@ -1032,7 +1032,7 @@ function vHome() {
   const a = aiAcc();
   const accCard = `<section class="card"><div class="hd"><h2>دقة التصحيح الآلي (مُقاسة)</h2>${a.runs ? `<button class="lnk danger" data-act="aiLogClear">تصفير السجل</button>` : ""}</div>${a.runs ? `<div class="grid4"><div class="tile"><b>${a.acc == null ? "—" : a.acc + "%"}</b><span>قراءات واثقة لم تعدّلها المعلمة</span></div><div class="tile"><b>${a.cov}%</b><span>خانات قُرئت بثقة</span></div><div class="tile"><b>${a.unsure}</b><span>خانة أُحيلت للمعلمة</span></div><div class="tile"><b>${a.sheets}</b><span>ورقة · ${a.cells} خانة</span></div></div><p class="muted">تُحسب تلقائيًا عند كل «اعتماد» بعد التصحيح بالتصوير: نقارن ما قرأه الذكاء الاصطناعي بما اعتمدته المعلمة بعد المراجعة. الخانات غير المؤكدة لا تُحسب صوابًا ولا خطأ، بل تُحال للمعلمة.</p>` : `<p class="muted">لم تُصحَّح أوراق بالتصوير بعد. عند أول «اعتماد» بعد التصحيح بالتصوير ستظهر هنا نسبة القراءات التي لم تحتاجي إلى تعديلها، وعدد الخانات التي أُحيلت إليك.</p>`}</section>`;
   const imp = S.imported ? `<div class="note ok"><b>أُدخلت بياناتك.</b> ${S.imported.n} طالبة في القائمة، منهن ${S.imported.graded} لها درجات في اختبار الفترة الأولى، مع نتائج اختبار التحسين وأوراق الإجابة.</div>` : S.importError ? `<div class="note bad">تعذّر إدخال ملف البيانات المجهّز: ${esc(S.importError)}</div>` : "";
-  return `${imp}${starBoard()}${g && g.n ? dashCard(t) : ""}<section class="card tourcard"><div><h2>عرض المنصة</h2><p class="muted">جولة من خمس خطوات تشرح الفكرة كاملة في نحو 90 ثانية، والأسماء مموّهة أثناءها.</p></div><button class="btn" data-act="tour">▶ بدء الجولة</button></section>
+  return `${imp}${starBoard()}${g && g.n ? dashCard(t) : ""}<section class="card tourcard"><div><h2>عرض المنصة</h2><p class="muted">جولة من خمس خطوات تشرح الفكرة كاملة في نحو 90 ثانية.</p></div><button class="btn" data-act="tour">▶ بدء الجولة</button></section>
   <section class="card mapcard"><div class="hd"><h2>خريطة الإتقان${t ? " · " + esc(t.name) : ""}</h2><div class="legend"><span><i class="sq high"></i>متقنة 80% فأكثر</span><span><i class="sq mid"></i>تحتاج دعمًا</span><span><i class="sq low"></i>أقل من 50%</span><span><i class="sq none"></i>لم تُختبر بعد</span></div></div>${skillMap(g && g.n ? g : null)}<p class="muted">كل مربع مهارة واحدة من مهارات المادة، مرتبة بفصول الكتاب. مرّري المؤشر على المربع لقراءة المهارة ونسبتها، والتفاصيل في <a href="#analysis">التحليل</a>.</p></section>
   <section class="grid4">${tiles.map(([n, l, to]) => `<a class="tile" href="#${to}"><b>${n}</b><span>${l}</span></a>`).join("")}</section>
   <section class="card"><div class="hd"><h2>ما يحتاج قرارك${t ? " · " + esc(t.name) : ""}</h2>${g && g.n ? `<span class="muted">المتوسط ${pct(g.mean, testMax(t))}% · ${g.n} طالبة</span>` : ""}</div>${decide}</section>
@@ -1052,7 +1052,7 @@ function vStudents() {
     <div class="row"><label class="fld sm">الفصل إن لم يُكتب في السطر<input id="rosterCls" placeholder="3/1"></label>
       <button class="btn" data-act="rosterAdd">${IC.plus} إضافة إلى القائمة</button>
       <label class="btn ghost">رفع ملف إكسل<input type="file" id="rosterFile" accept=".xlsx,.xls,.csv" hidden data-chg="rosterFile"></label></div>
-    <p class="note warn">رقم الهوية هو الرقم السري لدخول الطالبة. لا يُحفظ الرقم نفسه في المنصة، بل بصمة مشفّرة منه فقط، فلا يظهر لأحد. الأسماء مموّهة حتى تضغطي «إظهار الأسماء».</p></section>
+    <p class="note warn">رقم الهوية هو الرقم السري لدخول الطالبة. لا يُحفظ الرقم نفسه في المنصة، بل بصمة مشفّرة منه فقط، فلا يظهر لأحد.</p></section>
   <section class="card"><div class="hd"><h2>الطالبات (${S.roster.length})</h2>${S.roster.length ? `<button class="btn sm ghost danger" data-act="rosterClear">حذف القائمة كلها</button>` : ""}</div>
     ${by.length ? by.map((c) => `<h3>فصل ${esc(c)} <small class="muted">${S.roster.filter((s) => s.cls === c).length} طالبة</small></h3><div class="scroll"><table class="tbl"><thead><tr><th>رقم الورقة</th><th>الاسم</th><th>رقم الهوية</th><th></th></tr></thead><tbody>${sortedStudents(c).map((s) => `<tr><td class="num">${s.no}</td><td>${nm(s)}</td><td class="num">${maskId(s)}</td><td><button class="lnk" data-act="peek" data-s="${s.id}">صفحة الطالبة ووليّ الأمر</button> <button class="lnk danger" data-act="rosterDel" data-id="${s.id}">حذف</button></td></tr>`).join("")}</tbody></table></div>`).join("") : `<p class="muted">لا توجد طالبات بعد.</p>`}</section>`;
 }
@@ -2563,7 +2563,7 @@ const I18N = {
   "توضيح كيفية ضبط المتغيرات في أثناء التجربة العلمية: #%، المستهدف #%": "Explaining how to control variables during a scientific experiment: #%, target #%",
   "ثبات مرتفع: الدرجات متسقة ويمكن الاعتماد عليها في القرار. درجة الطالبة الحقيقية تقع غالبًا بين درجتها ناقص # وزائد #.": "High reliability: marks are consistent and dependable for decisions. A student's true mark usually lies between her mark minus # and plus #.",
   "جولات تقويم تكويني: اختبارات تحسين مصحَّحة": "Formative assessment rounds: marked improvement tests",
-  "جولة من خمس خطوات تشرح الفكرة كاملة في نحو # ثانية، والأسماء مموّهة أثناءها.": "A five-step tour explaining the whole idea in about # seconds; names are blurred during it.",
+  "جولة من خمس خطوات تشرح الفكرة كاملة في نحو # ثانية.": "A five-step tour explaining the whole idea in about # seconds.",
   "جيد": "Good",
   "ج✓": "C✓",
   "حذف المهارة": "Delete skill",
@@ -2588,7 +2588,7 @@ const I18N = {
   "ربط العلاقة بين مكونات البراكين وأشكالها بقوة انفجار الصهارة – #%": "Relating the components and shapes of volcanoes to the force of magma eruption – #%",
   "ربط العلاقة بين مكونات البراكين وأشكالها بقوة انفجار الصهارة: #%، المستهدف #%": "Relating the components and shapes of volcanoes to the force of magma eruption: #%, target #%",
   "رد وليّ الأمر على المعلمة": "Parent’s reply to the teacher",
-  "رقم الهوية هو الرقم السري لدخول الطالبة. لا يُحفظ الرقم نفسه في المنصة، بل بصمة مشفّرة منه فقط، فلا يظهر لأحد. الأسماء مموّهة حتى تضغطي «إظهار الأسماء».": "The ID number is the student’s PIN. The number itself isn’t stored on the platform, only an encrypted fingerprint of it, so no one can see it. Names are blurred until you tap “Show names”.",
+  "رقم الهوية هو الرقم السري لدخول الطالبة. لا يُحفظ الرقم نفسه في المنصة، بل بصمة مشفّرة منه فقط، فلا يظهر لأحد.": "The ID number is the student’s PIN. The number itself isn’t stored on the platform, only an encrypted fingerprint of it, so no one can see it.",
   "رمز وليّ الأمر": "Parent code",
   "رموز أولياء الأمور": "Parent codes",
   "سؤال «لماذا؟ وما دليلك؟» بعد كل إجابة": "Ask “Why? What's your evidence?” after every answer",
@@ -3108,6 +3108,7 @@ renderLanding = function () {
     <section class="mx-quote" aria-label="${T("حكمة", "Quote")}">
       <div class="mx-quote-in">
         <blockquote><p>${T("البيانات وحدها لا تغيّر التعليم… بل التربويون الذين يقرؤونها بحكمة.", "Data doesn’t change education — educators who read it wisely do.")}</p></blockquote>
+        <p class="mx-quote-key">${T("القيمة الحقيقية لا تكمن في معرفة الدرجة فحسب، بل في فهم دلالاتها وتوظيفها في تحسين الأداء.", "The real value lies not just in knowing the grade, but in understanding what it means and using it to improve performance.")}</p>
         <p class="mx-quote-sub">${T("وإتقان تجعل هذه القراءة سهلة: تحوّل أوراق الإجابة والدرجات إلى صورة واضحة للمهارات والفجوات، وقرار جاهز لكل طالبة، دون جداول معقدة ولا حسابات يدوية.", "Itqan makes that reading easy: it turns answer sheets and marks into a clear picture of skills and gaps, with a ready decision for every student — no complex spreadsheets, no manual calculations.")}</p>
         <ul class="mx-quote-pts">
           <li><b>${T("من الدرجة إلى القرار", "From mark to decision")}</b><span>${T("علاج أو دعم أو إثراء لكل طالبة، محسوبًا تلقائيًا.", "Remediation, support or enrichment for each student, worked out automatically.")}</span></li>
@@ -3189,13 +3190,13 @@ function renderStaff() {
   const logo = s.logo ? `<img class="slogo" src="${esc(s.logo)}" alt="">` : `<span class="mark">✓</span>`;
   app.innerHTML = `
   <header class="top"><div class="brand">${logo}<div><b>${T("إتقان", "Itqan")}</b><span data-keep>${esc(s.school)}</span></div></div>
-    <div class="who"><span>${rT(R)}</span><button class="btn sm ${S.ui.reveal ? "" : "ghost"}" data-act="reveal" aria-pressed="${S.ui.reveal ? "true" : "false"}">${EYE} ${S.ui.reveal ? T("إخفاء الأسماء", "Hide names") : T("إظهار الأسماء", "Show names")}</button><button class="btn ghost sm" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button><button class="btn ghost sm" data-act="logout">${T("خروج", "Sign out")}</button></div></header>
+    <div class="who"><span>${rT(R)}</span><button class="btn ghost sm" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button><button class="btn ghost sm" data-act="logout">${T("خروج", "Sign out")}</button></div></header>
   <nav class="tabs" aria-label="${rT(R)}">${R.tabs.map((k) => `<a href="#" data-act="stTab" data-k="${k}" class="${tab === k ? "on" : ""}">${tabT(k)}</a>`).join("")}</nav>
   ${S.loadError ? `<div class="note bad">${esc(S.loadError)}</div>` : ""}
   ${Store.demoStaff ? `<div class="note demo"><span>${T("<b>نسخة تجريبية.</b> تعرض اللوحة بيانات معلمة واحدة انضمت إلى المدرسة. في الموقع الحقيقي تظهر هنا كل معلمة تنضم.", "<b>Demo.</b> This dashboard shows one teacher who joined the school. On the real site every teacher who joins appears here.")}</span></div>` : ""}
   <div class="note">${T("لوحة للاطلاع فقط: لا تغيّر الدرجات ولا بيانات المعلمات. ولا تظهر فيها إلا بيانات المعلمات اللاتي انضممن إلى المدرسة.", "Read-only dashboard: it never changes marks or teachers' data, and shows only teachers who joined the school.")}</div>
   <main id="view">${({ overview: stOverview, academic: stAcademic, warning: stWarning, behavior: stBehavior, parents: stParents, staff: stStaff }[tab])()}</main>`;
-  document.body.classList.toggle("priv", !S.ui.reveal);
+  document.body.classList.remove("priv");
   document.body.classList.add("staff");
   applyLang(app);
 }
@@ -3297,21 +3298,21 @@ A.stInvite = () => guard(async () => {
 }, T("أُرسلت الدعوة.", "Invitation sent."));
 A.stDecide = (el) => guard(async () => { await Store.schoolDecide(el.dataset.m, el.dataset.a); S.members = null; render(); }, T("تم.", "Done."));
 
-/* ---------- demo only: the teacher enters directly; the password is asked only to show the real (encrypted) names ---------- */
+/* ---------- demo only: the real names are stored encrypted; the password is asked once when the teacher enters ---------- */
 if (Store.demoStaff) {
-  A.asTeacher = () => guard(async () => { A.close(); S.role = "teacher"; S.loaded = false; render(); await loadAll(); render(); window.scrollTo(0, 0); });
-  const _reveal0 = A.reveal;
-  A.reveal = (el) => {
-    if (S.ui.reveal || !Store.namesLocked || !Store.namesLocked()) return _reveal0(el);
-    modal(`<h3>${T("إظهار الأسماء", "Show names")}</h3><p class="muted">${T("الأسماء الحقيقية محفوظة مشفّرة في هذه الصفحة. اكتبي كلمة المرور لإظهارها.", "Real names are stored encrypted on this page. Enter the password to show them.")}</p>
+  const enterTeacher = () => guard(async () => { A.close(); S.role = "teacher"; S.loaded = false; render(); await loadAll(); render(); window.scrollTo(0, 0); });
+  A.asTeacher = () => {
+    if (!Store.namesLocked || !Store.namesLocked()) return enterTeacher();
+    modal(`<h3>${T("دخول المعلمة", "Teacher sign-in")}</h3><p class="muted">${T("أسماء الطالبات الحقيقية محفوظة مشفّرة في هذه الصفحة. اكتبي كلمة المرور لتظهر.", "Real student names are stored encrypted on this page. Enter the password to show them.")}</p>
       <label class="fld">${T("كلمة المرور", "Password")}<input id="unlockPw" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"></label><small id="unlockErr" class="err"></small>
-      <div class="row end"><button class="btn ghost" data-act="close">${T("إلغاء", "Cancel")}</button><button class="btn" data-act="unlockNames">${T("إظهار", "Show")}</button></div>`);
+      <div class="row end wrap"><button class="lnk" data-act="enterNoNames">${T("الدخول بأسماء مؤقتة", "Enter with placeholder names")}</button><button class="btn" data-act="unlockNames">${T("دخول", "Sign in")}</button></div>`);
     setTimeout(() => { const i = $("#unlockPw"); if (i) i.focus(); }, 50);
   };
+  A.enterNoNames = () => enterTeacher();
   A.unlockNames = () => guard(async () => {
     const pw = (($("#unlockPw") || {}).value || "").trim();
     if (!(await Store.unlockNames(pw))) { $("#unlockErr").textContent = T("كلمة المرور غير صحيحة.", "Wrong password."); return; }
-    A.close(); const sid = S.sid, peek = S.peek; await loadAll(); S.sid = sid; S.peek = peek; S.ui.reveal = true; render();
+    await enterTeacher();
   });
 }
 
