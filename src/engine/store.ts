@@ -88,7 +88,7 @@ export function createStore() {
         return;
       }
       case "skills": {
-        await upsert(sb, "subjects", subjectsToRows(data.subjects || [], own.school_id), "id");
+        await upsert(sb, "subjects", subjectsToRows(data.subjects || [], own.school_id), "school_id,id");
         const rows = skillsToRows(data.list, own);
         await upsert(sb, "skills", rows, "id");
         return prune(sb, "skills", { teacher_id: own.teacher_id }, "id", rows.map((r) => r.id));

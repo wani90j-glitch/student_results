@@ -14,7 +14,7 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   const sb = await supabaseUser();
   const { data: { user } } = await sb.auth.getUser();
-  if (!user || user.app_metadata?.role === "student") return fail("auth", 401);
+  if (!user || ["student", "guardian"].includes(user.app_metadata?.role)) return fail("auth", 401);
   const admin = supabaseAdmin();
   const { data: teacher } = await admin.from("teachers").select("id, school_id").eq("id", user.id).maybeSingle();
   const adminEmail = (process.env.ITQAN_ADMIN_EMAIL || "").trim().toLowerCase();
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   try {
     const report = await importExport(admin, ex, user.id, schoolId);
     return json(report);
-  } catch {
-    return fail("import", 500);
+  } catch (e: any) {
+    return fail(e?.code === "id_taken" ? "id_taken" : "import", e?.code === "id_taken" ? 409 : 500);
   }
 }

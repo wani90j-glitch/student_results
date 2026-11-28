@@ -20,12 +20,8 @@ export async function POST(req: Request) {
     if (!own.has(it.id) || pin.length < 8) continue;
     const { error } = await admin.from("students").update({ pin_lookup: pinLookup(pin), pin_hash: hashPin(pin) }).eq("id", it.id).eq("teacher_id", c.teacher.id);
     if (error) { if (error.code === "23505") dup.push(it.id); continue; }
-    // her sign-in identity (no e-mail is ever sent to it)
-    const { data: s } = await admin.from("students").select("auth_user_id").eq("id", it.id).single();
-    if (!s?.auth_user_id) {
-      const { data: u } = await admin.auth.admin.createUser({ email: `${it.id.toLowerCase()}@students.itqan.invalid`, email_confirm: true, app_metadata: { role: "student" } });
-      if (u?.user) await admin.from("students").update({ auth_user_id: u.user.id }).eq("id", it.id);
-    }
+    // her one sign-in for all her teachers (kept if it already exists)
+    await admin.from("student_identities").upsert({ pin_lookup: pinLookup(pin), pin_hash: hashPin(pin) }, { onConflict: "pin_lookup", ignoreDuplicates: true });
     n++;
   }
   return json({ saved: n, duplicates: dup });

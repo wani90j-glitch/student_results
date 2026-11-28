@@ -26,7 +26,6 @@ if (!URL || !KEY || !process.env.PIN_PEPPER) {
   process.exit(1);
 }
 const sb = createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-const STUDENT_DOMAIN = "students.itqan.invalid";
 
 async function findUser(sb: SupabaseClient, mail: string) {
   for (let page = 1; page < 100; page++) {
@@ -79,7 +78,6 @@ async function main() {
   // 3. upsert table by table (parents first)
   for (const [table, key] of TABLE_KEYS) {
     const list: any[] = (rows as any)[table];
-    if (table === "students") list.forEach((s) => { const o = existing.get(s.id); if (o?.auth_user_id) s.auth_user_id = o.auth_user_id; });
     if (table === "sheets") {
       // never wipe a file that was already uploaded in the new app
       const have = new Map((await allRows("sheets", ["teacher_id", teacherId]).catch(() => [])).map((r) => [`${r.student_id}|${r.key}`, r]));
@@ -91,18 +89,13 @@ async function main() {
     }
   }
 
-  // 4. one sign-in identity per student (no e-mail, no password: she signs in with her PIN through the server)
-  let made = 0;
-  for (const s of rows.students) {
-    if ((s as { auth_user_id?: string }).auth_user_id || existing.get(s.id)?.auth_user_id) continue;
-    const mail = `${s.id.toLowerCase()}@${STUDENT_DOMAIN}`;
-    let u = (await sb.auth.admin.createUser({ email: mail, email_confirm: true, app_metadata: { role: "student" } })).data.user;
-    if (!u) u = await findUser(sb, mail);
-    if (!u) throw new Error(`could not create the sign-in identity of ${s.id}`);
-    const { error } = await sb.from("students").update({ auth_user_id: u.id }).eq("id", s.id);
-    if (error) throw error;
-    made++;
+  // 4. one sign-in per student (shared by all her teachers); she signs in with her PIN through the server
+  const idRows = (rows.students as any[]).filter((x) => x.pin_lookup && x.pin_hash).map((x) => ({ pin_lookup: x.pin_lookup, pin_hash: x.pin_hash }));
+  for (let i = 0; i < idRows.length; i += 400) {
+    const { error } = await sb.from("student_identities").upsert(idRows.slice(i, i + 400), { onConflict: "pin_lookup", ignoreDuplicates: true });
+    if (error) throw new Error(`student_identities: ${error.message}`);
   }
+  const made = idRows.length;
 
   // 5. report: counts per table
   console.log("\nTable                 in file   in database");
@@ -112,7 +105,7 @@ async function main() {
     const { count } = await sb.from(table).select("*", { count: "exact", head: true }).eq(col, val);
     console.log(`${table.padEnd(22)}${String((rows as any)[table].length).padStart(7)}${String(count ?? "?").padStart(14)}`);
   }
-  console.log(`\nNew student sign-in identities: ${made}`);
+  console.log(`\nStudent sign-ins ready: ${made}`);
   warnings.forEach((w) => console.log("! " + w));
 
   // 6. spot-check 3 students: figures read back from the database = figures from the file

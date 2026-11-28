@@ -25,9 +25,10 @@ export function pinLookup(pin: string) {
 }
 
 const N = 16384, r = 8, p = 1, LEN = 32;
+const norm = (v: string) => (String(v).startsWith("parent|") ? "parent|" + normalizePin(String(v).slice(7)) : normalizePin(v));
 export function hashPin(pin: string) {
   const salt = randomBytes(16);
-  const h = scryptSync(normalizePin(pin), salt, LEN, { N, r, p });
+  const h = scryptSync(norm(pin), salt, LEN, { N, r, p });
   return `scrypt$${salt.toString("base64")}$${h.toString("base64")}`;
 }
 
@@ -36,6 +37,6 @@ export function verifyPin(pin: string, stored: string | null | undefined) {
   const [alg, s, h] = stored.split("$");
   if (alg !== "scrypt" || !s || !h) return false;
   const want = Buffer.from(h, "base64");
-  const got = scryptSync(normalizePin(pin), Buffer.from(s, "base64"), want.length, { N, r, p });
+  const got = scryptSync(norm(pin), Buffer.from(s, "base64"), want.length, { N, r, p });
   return got.length === want.length && timingSafeEqual(got, want);
 }

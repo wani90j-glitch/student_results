@@ -16,12 +16,28 @@ export async function importExport(admin: any, ex: ExportFile, teacherId: string
   const { rows, warnings } = transform(ex, { schoolId, teacherId, pin });
   const haveSheets = new Map((await allRows(admin, "sheets", { teacher_id: teacherId }).catch(() => [])).map((r: any) => [`${r.student_id}|${r.key}`, r]));
   (rows.sheets as any[]).forEach((r) => { const o: any = haveSheets.get(`${r.student_id}|${r.key}`); if (o?.storage_path) { r.storage_path = o.storage_path; r.pages = o.pages; r.legacy_asset = null; } });
+  // never overwrite another teacher's rows: every id-keyed row must be new or already hers
+  for (const [table, key] of TABLE_KEYS) {
+    if (key !== "id" || table === "schools" || table === "teachers") continue;
+    const ids = ((rows as any)[table] as any[]).map((r) => r.id);
+    for (let i = 0; i < ids.length; i += 300) {
+      const { data, error } = await admin.from(table).select("id").in("id", ids.slice(i, i + 300)).neq("teacher_id", teacherId).limit(1);
+      if (error) throw new Error(`${table}: check failed`);
+      if (data?.length) throw Object.assign(new Error("id_taken"), { code: "id_taken" });
+    }
+  }
   for (const [table, key] of TABLE_KEYS) {
     const list: any[] = (rows as any)[table];
     for (let i = 0; i < list.length; i += 400) {
       const { error } = await admin.from(table).upsert(list.slice(i, i + 400), { onConflict: key });
       if (error) throw new Error(`${table}: ${error.message}`);
     }
+  }
+  // one sign-in per student (shared by all her teachers); an existing identity is kept as it is
+  const ids = (rows.students as any[]).filter((x) => x.pin_lookup && x.pin_hash).map((x) => ({ pin_lookup: x.pin_lookup, pin_hash: x.pin_hash }));
+  for (let i = 0; i < ids.length; i += 400) {
+    const { error } = await admin.from("student_identities").upsert(ids.slice(i, i + 400), { onConflict: "pin_lookup", ignoreDuplicates: true });
+    if (error) throw new Error(`student_identities: ${error.message}`);
   }
   // counts
   const counts: { table: string; file: number; db: number | null }[] = [];

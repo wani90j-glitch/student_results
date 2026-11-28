@@ -11,16 +11,18 @@ export const maxDuration = 300;
 
 export async function POST(req: Request) {
   const c = await caller();
-  if (c.role !== "student" || !c.sid) return fail("auth", 401);
+  if (c.role !== "student" || !c.records.length) return fail("auth", 401); // the student hands in her work, not her parent
   const form = await req.formData();
   const meta = JSON.parse(String(form.get("meta") || "{}"));
   const frames = form.getAll("frames").filter((f): f is File => f instanceof File).slice(0, 10);
   // the task must be hers and not graded yet (read with her own session: RLS)
-  const { data: task } = await c.sb.from("perf_tasks").select("*").eq("id", meta.taskId).eq("student_id", c.sid).maybeSingle();
+  const { data: task } = await c.sb.from("perf_tasks").select("*").eq("id", meta.taskId).maybeSingle(); // RLS: only her own tasks
+  const sid = task && c.records.some((r) => r.id === task.student_id) ? (task.student_id as string) : null;
+  if (!sid) return fail("invalid_argument", 400);
   // a task tied to a test closes once graded; a mastery task stays open until the teacher confirms mastery
   if (!task || (task.set_id ? task.status === "mastered" : task.teacher_grade != null)) return fail("invalid_argument", 400);
   const admin = supabaseAdmin();
-  if (!(await underQuota(admin, "student_id", c.sid, 12))) return fail("rate_limited", 429);
+  if (!(await underQuota(admin, "student_id", sid, 12))) return fail("rate_limited", 429);
   const { data: skills } = await admin.from("skills").select("id, name").in("id", task.skills?.length ? task.skills : ["-"]);
   const skName = (id: string) => (skills || []).find((s: any) => s.id === id)?.name || "";
   const rubric = task.rubric as { c: string; max: number; lv?: string[] }[];
@@ -37,15 +39,15 @@ export async function POST(req: Request) {
     const j: any = parseJson(r.text);
     const sc = rubric.map((q, i) => { const e = (j?.scores || [])[i] || {}; return { got: Math.max(0, Math.min(q.max, Math.round((+e.got || 0) * 2) / 2)), why: String(e.why || "") }; });
     ev = { scores: sc, total: sc.reduce((a, e) => a + e.got, 0), fb: String(j?.fb || ""), good: (j?.good || []).map(String).slice(0, 4), next: (j?.next || []).map(String).slice(0, 4), at: new Date().toISOString() };
-    await admin.from("ai_jobs").insert({ student_id: c.sid, kind: "task-eval", input_tokens: r.usage?.input_tokens ?? null, output_tokens: r.usage?.output_tokens ?? null });
+    await admin.from("ai_jobs").insert({ student_id: sid, kind: "task-eval", input_tokens: r.usage?.input_tokens ?? null, output_tokens: r.usage?.output_tokens ?? null });
   } catch (e: any) {
-    await admin.from("ai_jobs").insert({ student_id: c.sid, kind: "task-eval", status: e?.code || "error" });
+    await admin.from("ai_jobs").insert({ student_id: sid, kind: "task-eval", status: e?.code || "error" });
   }
   const sub = meta.sub || {};
   const at = String(sub.at || new Date().toISOString());
   const { error } = await admin.from("task_submissions").insert({
-    id: subIdOf(c.sid, task.test_id || task.set_id, at), task_id: task.id, student_id: c.sid, school_id: task.school_id, kind: ["img", "pdf", "vid"].includes(sub.kind) ? sub.kind : "img",
-    storage_path: typeof sub.path === "string" && sub.path.includes(`/student/${c.sid}/`) ? sub.path : null,
+    id: subIdOf(sid, task.test_id || task.set_id, at), task_id: task.id, student_id: sid, school_id: task.school_id, kind: ["img", "pdf", "vid"].includes(sub.kind) ? sub.kind : "img",
+    storage_path: typeof sub.path === "string" && sub.path.includes(`/student/${sid}/`) ? sub.path : null,
     thumbs: (Array.isArray(sub.th) ? sub.th : []).filter((t: unknown) => typeof t === "string" && t.startsWith("data:image/jpeg") && t.length < 400000).slice(0, 4),
     name: String(sub.name || "").slice(0, 200), size: +sub.size || null, note, duration: Math.round(dur) || null, submitted_at: at,
   });

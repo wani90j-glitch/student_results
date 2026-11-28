@@ -81,7 +81,7 @@ export function transform(
 
 /** Insert order (parents first) and the conflict key of each table, for idempotent upserts. */
 export const TABLE_KEYS: [string, string][] = [
-  ["schools", "id"], ["teachers", "id"], ["subjects", "id"], ["classes", "id"], ["students", "id"], ["skills", "id"], ["questions", "id"], ["qimg", "id"],
+  ["schools", "id"], ["teachers", "id"], ["subjects", "school_id,id"], ["classes", "id"], ["students", "id"], ["skills", "id"], ["questions", "id"], ["qimg", "id"],
   ["tests", "id"], ["test_results", "test_id,student_id"], ["improvement_rounds", "id"], ["improvement_items", "round_id,student_id"],
   ["sheets", "student_id,key"], ["sends", "student_id,test_id"], ["perf_tasks", "student_id,test_id"], ["task_submissions", "id"],
   ["acks", "student_id,key"], ["notes", "id"], ["behavior_events", "id"], ["class_groups", "class_id,idx"],

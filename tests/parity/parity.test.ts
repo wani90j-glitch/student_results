@@ -56,14 +56,14 @@ function synthetic(L: Legacy): Dataset {
   return { label: "synthetic", skills, bank, roster, tests: { [t1.id]: t1, [t2.id]: t2 }, improve: {}, acks, behavior };
 }
 
-function useData(L: Legacy, d: Dataset) {
+function loadData(L: Legacy, d: Dataset) {
   Object.assign(L.S, { skills: d.skills, bank: d.bank, roster: d.roster, tests: d.tests, imps: d.improve, acks: d.acks, behavior: d.behavior, settings: { gap: { mode: "crit", crit: 80 } } });
 }
 const ctxOf = (d: Dataset): Ctx => ({ skills: d.skills, bank: d.bank, roster: d.roster, imps: Object.values(d.improve) });
 
 /** Every comparison the port must match. */
 async function compareAll(L: Legacy, d: Dataset) {
-  useData(L, d);
+  loadData(L, d);
   const ctx = ctxOf(d);
   const classes = [...new Set(d.roster.map((s) => s.cls))];
   let checks = 0;
@@ -109,7 +109,7 @@ describe.skipIf(!hasSource())("parity with the original app", () => {
     const d = synthetic(L);
     await compareAll(L, d);
     // improvement round 1: both implementations must build the same papers
-    useData(L, d);
+    loadData(L, d);
     const t = d.tests.t_main;
     for (const crit of ["lost", "80", "50"]) {
       const old = L.fn.buildImprovement(t, crit);
@@ -121,7 +121,7 @@ describe.skipIf(!hasSource())("parity with the original app", () => {
     Object.entries(r1.items as Record<string, number[]>).forEach(([sid, it], k) => { if (k % 7) r1.results[sid] = it.map(() => (rnd() < 0.7 ? 1 : 0)); });
     d.improve[r1.id] = r1;
     await compareAll(L, d);
-    useData(L, d);
+    loadData(L, d);
     const r2 = L.fn.buildImprovement(t, "lost");
     expect(buildImprovement(ctxOf(d), t, "lost", r2.id, r2.date)).toEqual(r2);
     r2.id = "m_round2";

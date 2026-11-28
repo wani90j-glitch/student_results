@@ -18,6 +18,7 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "public/vendor/**", // third-party libraries, self-hosted
       "src/engine/itqan.js", // generated from the original app by scripts/port-engine.py
     ],
   },

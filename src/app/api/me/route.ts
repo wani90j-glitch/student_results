@@ -11,11 +11,16 @@ import { allRows } from "@/lib/server/rows";
 
 const strip = (q: any) => { if (!q) return q; const { ans, key, ...rest } = q; return rest; };
 
-export async function GET() {
+export async function GET(req: Request) {
   const c = await caller();
-  if (c.role !== "student" || !c.sid) return fail("auth", 401);
+  if ((c.role !== "student" && c.role !== "guardian") || !c.records.length) return fail("auth", 401);
   const admin = supabaseAdmin();
-  const me = c.sid, tid = (c as any).student.teacher_id as string, school = (c as any).student.school_id as string;
+  // one record = this student with one teacher; ?sid chooses which (a subject, or a daughter for a parent)
+  const want = new URL(req.url).searchParams.get("sid");
+  const rec = c.records.find((r) => r.id === want) || c.records[0];
+  const me = rec.id, tid = rec.teacher_id, school = rec.school_id;
+  const tch = await admin.from("teachers").select("id, display_name, subject").in("id", [...new Set(c.records.map((r) => r.teacher_id))]).then((r) => r.data || []);
+  const records = c.records.map((r) => { const t: any = tch.find((x: any) => x.id === r.teacher_id) || {}; return { sid: r.id, subject: t.subject || "", teacher: t.display_name || "", name: r.name }; });
   const [school_row, teacher, classes, students, skills, tests, test_results, rounds, items] = await Promise.all([
     admin.from("schools").select("*").eq("id", school).single().then((r) => r.data),
     admin.from("teachers").select("*").eq("id", tid).single().then((r) => r.data),
@@ -72,5 +77,6 @@ export async function GET() {
     schoolId: school, subjects: [], skills: full.skills, bank: [], roster: [meRow], tests: outTests, imps: outImps,
     acks: mine.acks[me] ? { [me]: mine.acks[me] } : {}, sheets: mine.sheets, sheetPages: mine.sheetPages, qimg, behavior: [],
     stars: { s: { [me]: meRow ? full.stars.s[me] || 0 : 0 }, g: {} }, gapPre, tasks: mine.tasks,
+    sid: me, records, isGuardian: c.role === "guardian",
   });
 }

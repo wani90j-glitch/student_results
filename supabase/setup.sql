@@ -707,3 +707,9 @@ create policy staff_notes on public.notes for select to authenticated
 create policy staff_audit on public.audit_log for select to authenticated using (teacher_id in (select app.staff_teachers('academic')));
 -- staff may read the teachers' names of their school
 create policy staff_teachers on public.teachers for select to authenticated using (id in (select app.staff_teachers('roster')));
+
+-- ===== supabase/migrations/0007_subjects_per_school.sql
+-- Subjects are named per school (two schools may both have "sci9"): key them by (school_id, id).
+alter table public.skills drop constraint if exists skills_subject_id_fkey;
+alter table public.subjects drop constraint subjects_pkey;
+alter table public.subjects add primary key (school_id, id);
