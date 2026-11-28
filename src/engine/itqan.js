@@ -2592,17 +2592,58 @@ const SICON = {
 };
 const sico = (k) => `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SICON[k]}</svg>`;
 
-/* ---------- the school's page (landing) ---------- */
+/* ---------- the school's page (landing): white top bar, hero over soft green waves, figures, award, footer wave ---------- */
+const AWARD_IMG = "/awards/saif-silver.jpg";
+const MXI = {
+  school: SICON.principal, teacher: SICON.teacher, student: SICON.student,
+  bank: '<path d="M4 5h11a3 3 0 0 1 3 3v11H7a3 3 0 0 1-3-3V5Z"/><path d="M8 9h6M8 12h6M8 15h3"/>',
+  test: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10l2 2 4-4M9 16h6"/>',
+  improve: '<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/><path d="m9 12 2 2 4-4"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+};
+const mxico = (k, n = 26) => `<svg viewBox="0 0 24 24" width="${n}" height="${n}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MXI[k] || SICON[k]}</svg>`;
+const mxNum = (n) => (n >= 1e6 ? (Math.round(n / 1e5) / 10) + "M" : n >= 1e4 ? (Math.round(n / 100) / 10) + "K" : String(n));
+const MX_WAVES = `<svg class="mx-bg" viewBox="0 0 1440 640" preserveAspectRatio="none" aria-hidden="true">
+  <path d="M960 0C1080 150 1180 330 1440 380V0Z" fill="#e6f8ee"/>
+  <path d="M0 330C260 200 470 170 700 260S1100 520 1440 420V640H0Z" fill="#d3f3e1"/>
+  <path d="M0 470C300 400 560 430 820 500S1220 560 1440 520V640H0Z" fill="#a8e8c4"/>
+  <path d="M0 560C360 520 700 560 1000 590S1300 600 1440 585V640H0Z" fill="#3cc47c"/>
+  <path d="M-20 360C80 220 190 200 250 290S330 450 420 380 520 230 600 300" fill="none" stroke="#f5cf4a" stroke-width="7" stroke-linecap="round"/>
+  <g fill="#9fdcbc"><path d="M300 90l6 16 16 6-16 6-6 16-6-16-16-6 16-6z"/><path d="M760 60l5 12 12 5-12 5-5 12-5-12-12-5 12-5z"/><path d="M1180 140l4 10 10 4-10 4-4 10-4-10-10-4 10-4z"/><path d="M560 160l4 9 9 4-9 4-4 9-4-9-9-4 9-4z"/></g>
+</svg>`;
 renderLanding = function () {
   const s = S.settings, card = (k, t, d, act) => `<button class="sp-role" data-act="${act}" data-r="${k}"><i>${sico(k)}</i><b>${t}</b><span>${d}</span></button>`;
-  app.innerHTML = `<div class="sp">
-    <header class="sp-top"><div class="sp-brand"><span class="mark">✓</span><div><b>إتقان</b><span>منصة إتقان المهارات</span></div></div><button class="btn ghost sm" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button></header>
-    <section class="sp-hero">
-      <div class="sp-school">${s.logo ? `<img class="slogo" src="${esc(s.logo)}" alt="">` : ""}<div><small>صفحة المدرسة</small><h1 data-keep>${esc(s.school || "مدرستي")}</h1>${s.region ? `<span data-keep>${esc(s.region)}</span>` : ""}</div></div>
-      <p class="lead">التقويم لا يكتمل عند الدرجة… بل عند الإتقان</p>
-      <p class="loopline"><b>حلقة تبدأ بالتشخيص… ولا تنتهي إلا بالإتقان</b><span>نقيس • نحلّل • نعالج • نعيد التقويم</span></p>
+  const c = (S.pub && S.pub.counts) || null;
+  const figs = c ? [["school", c.schools, "مدرسة"], ["teacher", c.teachers, "معلمة"], ["student", c.students, "طالبة مستفيدة"], ["bank", c.questions, "سؤالًا في بنوك المهارات"], ["test", c.tests, "اختبارًا مصحّحًا"], ["improve", c.improve, "اختبار تحسين فردي"]].filter((f) => f[1] > 0) : [];
+  app.innerHTML = `<div class="sp mx">
+    <header class="mx-nav">
+      <div class="mx-logo"><span class="mark">✓</span><div><b>إتقان</b><small dir="ltr">itqanloop</small></div></div>
+      <nav class="mx-links" aria-label="أقسام الصفحة"><button data-act="mxGo" data-to="mx-why">عن إتقان</button><button data-act="mxGo" data-to="mx-roles">الدخول</button>${figs.length ? `<button data-act="mxGo" data-to="mx-num">إتقان في أرقام</button>` : ""}<button data-act="mxGo" data-to="mx-awards">الجوائز</button></nav>
+      <div class="mx-tools"><button class="mx-tool" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button><button class="mx-tool" data-act="mxGo" data-to="mx-roles">${mxico("user", 22)}<span>تسجيل الدخول</span></button></div>
+    </header>
+    <section class="mx-hero">${MX_WAVES}
+      <div class="mx-hero-in">
+        ${s.school ? `<span class="mx-chip">${s.logo ? `<img src="${esc(s.logo)}" alt="">` : ""}<span data-keep>${esc(s.school)}</span></span>` : ""}
+        <h1>التقويم لا يكتمل عند الدرجة… بل عند الإتقان</h1>
+        <p>إتقان لا تعطي درجة فقط… بل تحوّلها إلى <b>خريطة طريق نحو الإتقان</b>.<br><span>نقيس • نحلّل • نعالج • نعيد التقويم</span></p>
+        <button class="mx-btn" data-act="mxGo" data-to="mx-roles">تسجيل الدخول</button>
+      </div>
     </section>
-    <section class="sp-sec"><h2>الدخول إلى المنصة</h2><p class="muted">اختاري صفتك في المدرسة.</p>
+    <section class="mx-sec mx-why" id="mx-why"><h2>من سباق على الدرجات… إلى رحلة نحو الإتقان</h2>
+      <p class="mx-lead">معظم المنصات تتوقف عند الدرجة. أما إتقان فتحدد <b>الفجوة</b> و<b>المهارات المفقودة</b> و<b>المستوى المعرفي</b>، ليُبنى عليها التقويم والعلاج.</p>
+      <div class="mx-vs">
+        <div class="mx-vs-a"><small>المعتاد</small><b>14 من 20</b><span>درجة تُسجَّل… ويتوقف الأمر عندها.</span></div>
+        <div class="mx-vs-arrow" aria-hidden="true">←</div>
+        <div class="mx-vs-b"><small>في إتقان</small><b>خريطة طريق</b><span>ما أتقنته الطالبة، وما ينقصها من مهارات، وفي أي مستوى معرفي: المعرفة أو التطبيق أو الاستدلال، ثم علاج يُعاد بعده التقويم في مهاراتها الناقصة وحدها.</span></div>
+      </div>
+      <div class="mx-pillars">
+        <div><b>تشخيص لا تصنيف</b><span>الفجوة عن الإتقان لكل طالبة ولكل مهارة، لا ترتيبها بين زميلاتها.</span></div>
+        <div><b>علاج مبني على الدليل</b><span>القرار علاج أو دعم أو إثراء، بحسب ما تكشفه المهارات والمستوى المعرفي.</span></div>
+        <div><b>ثقافة التعلم بالمهارات</b><span>حين تعرف الطالبة مهاراتها يتحول التعلم من سباق على الدرجات إلى رحلة نحو الإتقان.</span></div>
+      </div>
+    </section>
+    <section class="mx-sec" id="mx-roles"><h2>الدخول إلى المنصة</h2><p class="muted">اختاري صفتك في المدرسة.</p>
       <div class="sp-roles">
         ${card("teacher", "المعلمات", "المهارات، بنك الأسئلة، الاختبارات، التصحيح، التحليل، واختبارات التحسين.", "asTeacher")}
         ${card("student", "الطالبة", "تقرير مهاراتي، واختباراتي، ومهامي الأدائية.", "spPin")}
@@ -2616,14 +2657,41 @@ renderLanding = function () {
         <div class="row"><input id="nid" type="password" inputmode="numeric" autocomplete="off" placeholder="الرقم السري" aria-label="الرقم السري"><button class="btn" type="submit">دخول</button></div>
         <small id="loginErr" class="err"></small></form>
     </section>
-    <section class="sp-sec"><h2>كيف تعمل إتقان</h2>
+    ${figs.length ? `<section class="mx-sec mx-num" id="mx-num"><h2>إتقان في أرقام</h2>
+      <div class="mx-figs">${figs.map(([k, n, l]) => `<div class="mx-fig"><i>${mxico(k)}</i><b dir="ltr" data-n="${n}">+${mxNum(n)}</b><span>${l}</span></div>`).join("")}</div>
+      <p class="muted mx-note">تُحسب هذه الأرقام تلقائيًا من المنصة، ولا تتضمن أي اسم أو بيانات شخصية.</p></section>` : ""}
+    <section class="mx-award" id="mx-awards">
+      <svg class="mx-award-loop" viewBox="0 0 300 400" aria-hidden="true"><path d="M40 30c60-40 110 20 70 60s-90 10-50 70 160 20 150 110-120 40-90 110 120 20 150 0" fill="none" stroke="#f5cf4a" stroke-width="6" stroke-linecap="round"/></svg>
+      <div class="mx-award-in">
+        <div class="mx-award-txt"><h2>الجوائز والإشادات</h2>
+          <p>حصلت منصة «إتقان» على <b>الميدالية الفضية</b> في <b>معرض ومسابقة الأمن والابتكار العالمية (SAIF)</b>، تقديرًا لفكرتها في قياس إتقان المهارات وعلاج الفجوات حتى تصل كل طالبة إلى الإتقان.</p></div>
+        <figure class="mx-medal"><img src="${AWARD_IMG}" alt="الميدالية الفضية لمنصة إتقان في معرض ومسابقة SAIF" loading="lazy" width="520" height="578"><figcaption>الميدالية الفضية · SAIF</figcaption></figure>
+      </div>
+      <svg class="mx-wave-b" viewBox="0 0 1440 160" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60C320 10 640 30 900 90S1300 120 1440 80V160H0Z" fill="#a8e8c4"/><path d="M0 100C360 60 700 90 1000 120S1320 130 1440 115V160H0Z" fill="#1fb36a"/></svg>
+    </section>
+    <section class="mx-sec" id="mx-how"><h2>كيف تعمل إتقان</h2>
       <div class="hook"><b>طالبتان… الدرجة نفسها 14 من 20… والفجوة مختلفة.</b><span>الدرجة الكلية تُخفي المهارة الناقصة، فيُعاد الشرح للجميع ويضيع الجهد.</span></div>
       <ol class="hsteps"><li><b>يربط</b><span>كل سؤال بمهارته ومستواه المعرفي</span></li><li><b>يشخّص</b><span>فجوة كل طالبة عن الإتقان</span></li><li><b>يقرّر</b><span>علاج أو دعم أو إثراء</span></li><li><b>يعيد التقويم</b><span>في مهاراتها الناقصة وحدها</span></li></ol>
     </section>
-    <footer class="sp-foot">إتقان · itqanloop.com · بيانات الطالبات محفوظة ومشفّرة، ولا يرى كل دور إلا ما يخصه.</footer>
+    <footer class="mx-foot"><svg viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70C300 20 620 30 900 70S1280 110 1440 60V0H0Z" fill="#f4f7f9"/></svg>
+      <div class="mx-foot-in"><div class="mx-logo"><span class="mark">✓</span><div><b>إتقان</b><small dir="ltr">itqanloop.com</small></div></div>
+      <p>بيانات الطالبات محفوظة ومشفّرة، ولا يرى كل دور إلا ما يخصه.</p></div></footer>
   </div>`;
-  document.body.classList.remove("priv"); applyLang(app);
+  document.body.classList.remove("priv"); applyLang(app); mxCount();
 };
+/** The figures count up once when they come into view (skipped when the device asks for reduced motion). */
+function mxCount() {
+  const els = [...document.querySelectorAll(".mx-fig b[data-n]")];
+  if (!els.length || !("IntersectionObserver" in window) || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    if (!e.isIntersecting) return; io.unobserve(e.target);
+    const el = e.target, n = +el.dataset.n, t0 = performance.now(), d = 1400;
+    const step = (t) => { const k = Math.min(1, (t - t0) / d), v = Math.round(n * (1 - Math.pow(1 - k, 3))); el.textContent = "+" + mxNum(v); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }), { threshold: 0.4 });
+  els.forEach((el) => io.observe(el)); // the real figure stays visible until the animation starts
+}
+A.mxGo = (el) => { const t = document.getElementById(el.dataset.to); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); };
 A.spPin = (el) => { const i = $("#nid"); if (!i) return; i.placeholder = el.dataset.r === "parent" ? "رمز وليّ الأمر" : "الرقم السري"; i.closest("form").scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => i.focus(), 300); };
 A.spStaff = (el) => {
   const r = el.dataset.r, t = SROLE[r].t;
