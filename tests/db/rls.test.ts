@@ -7,6 +7,8 @@ const T1 = "11111111-1111-1111-1111-111111111111"; // teacher A
 const T2 = "22222222-2222-2222-2222-222222222222"; // teacher B, another school
 const U_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"; // student s_a (teacher A)
 const U_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"; // student s_b (teacher A, same class)
+const U_P = "cccccccc-cccc-cccc-cccc-cccccccccccc"; // parent of s_a
+const G1 = "00000000-0000-0000-0000-0000000000f1";
 const SC1 = "00000000-0000-0000-0000-0000000000a1", SC2 = "00000000-0000-0000-0000-0000000000a2";
 const C1 = "00000000-0000-0000-0000-0000000000c1", C2 = "00000000-0000-0000-0000-0000000000c2";
 
@@ -14,7 +16,7 @@ let db: PGlite;
 beforeAll(async () => {
   db = await freshDb();
   await db.exec(`
-    insert into auth.users (id) values ('${T1}'),('${T2}'),('${U_A}'),('${U_B}');
+    insert into auth.users (id) values ('${T1}'),('${T2}'),('${U_A}'),('${U_B}'),('${U_P}');
     insert into schools (id, name) values ('${SC1}','مدرسة أ'),('${SC2}','مدرسة ب');
     insert into teachers (id, school_id, display_name) values ('${T1}','${SC1}','معلمة أ'),('${T2}','${SC2}','معلمة ب');
     insert into classes (id, school_id, teacher_id, name) values ('${C1}','${SC1}','${T1}','3/1'),('${C2}','${SC2}','${T2}','3/1');
@@ -22,6 +24,9 @@ beforeAll(async () => {
       ('s_a','${SC1}','${T1}','${C1}',1,'طالبة أ','lookupA','hashA','${U_A}'),
       ('s_b','${SC1}','${T1}','${C1}',2,'طالبة ب','lookupB','hashB','${U_B}'),
       ('s_x','${SC2}','${T2}','${C2}',1,'طالبة س','lookupX','hashX',null);
+    insert into student_identities (pin_lookup, pin_hash, auth_user_id) values ('lookupA','hashA','${U_A}'),('lookupB','hashB','${U_B}');
+    insert into guardians (id, auth_user_id) values ('${G1}','${U_P}');
+    insert into parent_codes (code_lookup, code_hash, student_pin_lookup, guardian_id) values ('codeA','h','lookupA','${G1}');
     insert into skills (id, school_id, teacher_id, chapter, level, name) values ('k1','${SC1}','${T1}','ف1','K','مهارة');
     insert into tests (id, school_id, teacher_id, name, type, date, qs) values ('t1','${SC1}','${T1}','اختبار','p1','2026-10-18','[{"id":"q1","ans":2,"key":"سر"}]');
     insert into test_results values ('t1','s_a','${SC1}','${T1}','{1,0}'), ('t1','s_b','${SC1}','${T1}','{1,1}');
@@ -62,19 +67,29 @@ describe("student", () => {
       expect((await q("select name from schools")).map((r) => r.name)).toEqual(["مدرسة أ"]);
     });
   });
-  it("sees only behaviour notes the teacher shared, and may only mark them seen", async () => {
+  it("sees only behaviour notes the teacher shared; confirming them is the parent's", async () => {
     await as(db, U_A, async (q) => {
       expect((await q("select id from behavior_events")).map((r) => r.id)).toEqual(["b1"]);
-      await q("update behavior_events set parent_seen_at = now() where id = 'b1'");
+      expect(await q("update behavior_events set parent_seen_at = now() where id = 'b1' returning id")).toEqual([]);
+    });
+    await as(db, U_P, async (q) => {
+      expect((await q("select id from behavior_events")).map((r) => r.id)).toEqual(["b1"]);
+      expect(await q("update behavior_events set parent_seen_at = now() where id = 'b1' returning id")).toHaveLength(1);
       await expect(q("update behavior_events set type = 'x' where id = 'b1'")).rejects.toThrow();
     });
   });
-  it("can acknowledge and write a parent note only for herself", async () => {
+  it("acknowledgement and parent notes come from the parent only, and only for her own daughter", async () => {
     await as(db, U_A, async (q) => {
+      await expect(q(`insert into acks (student_id, key, school_id) values ('s_a','t1','${SC1}')`)).rejects.toThrow();
+      await expect(q(`insert into notes (student_id, school_id, by, text) values ('s_a','${SC1}','p','شكرًا')`)).rejects.toThrow();
+    });
+    await as(db, U_P, async (q) => {
       await q(`insert into acks (student_id, key, school_id) values ('s_a','t1','${SC1}')`);
       await q(`insert into notes (student_id, school_id, by, text) values ('s_a','${SC1}','p','شكرًا')`);
       await expect(q(`insert into acks (student_id, key, school_id) values ('s_b','t1','${SC1}')`)).rejects.toThrow();
       await expect(q(`insert into notes (student_id, school_id, by, text) values ('s_a','${SC1}','t','انتحال')`)).rejects.toThrow();
+      expect((await q("select id from students")).map((r) => r.id)).toEqual(["s_a"]);
+      expect((await q("select student_id from test_results")).map((r) => r.student_id)).toEqual(["s_a"]);
     });
   });
   it("cannot change results or give herself stars", async () => {

@@ -34,7 +34,8 @@ describe("task sets", () => {
     await db.exec(`insert into auth.users (id) values ('${T1}'),('${U_A}');
       insert into schools (id, name) values ('${own.school_id}','x'); insert into teachers (id, school_id, display_name) values ('${T1}','${own.school_id}','t');
       insert into classes values ('${C1}','${own.school_id}','${T1}','3/1');
-      insert into students (id, school_id, teacher_id, class_id, seat_no, name, auth_user_id) values ('s_a','${own.school_id}','${T1}','${C1}',1,'أ','${U_A}'),('s_b','${own.school_id}','${T1}','${C1}',2,'ب',null);`);
+      insert into students (id, school_id, teacher_id, class_id, seat_no, name, pin_lookup) values ('s_a','${own.school_id}','${T1}','${C1}',1,'أ','lkA'),('s_b','${own.school_id}','${T1}','${C1}',2,'ب','lkB');
+      insert into student_identities (pin_lookup, pin_hash, auth_user_id) values ('lkA','h','${U_A}');`);
     await as(db, T1, async (q) => {
       for (const r of taskSetToRows(T, own)) { const { sql, vals } = upsertSql("perf_tasks", "id", r); await q(sql, vals); }
       expect((await q("select count(*)::int n from perf_tasks where set_id = 'ts_1'"))[0].n).toBe(2);
