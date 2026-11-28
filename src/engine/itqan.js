@@ -2334,6 +2334,45 @@ A.coachLesson = () => {
 };
 { const st = document.createElement("style"); st.textContent = `.coachgrid{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.coachgrid .row{gap:6px;flex-wrap:wrap}.coachgrid select{max-width:280px}.coach h2 svg{vertical-align:-2px}`; document.head.appendChild(st); }
 
+/* English translations of interface sentences ("#" stands for a number). Filled from the harvested interface texts. */
+const I18N = {};
+
+/* ===== English interface: full sentences, never half-translated =====
+ * Text nodes are looked up whole (EN, then I18N with every number replaced by "#", e.g. "متوسط الاختبار من # (#%)").
+ * A line made of parts joined by " · " is translated part by part. Curriculum content and names stay as written.
+ * The old word-by-word fallback (which produced mixed lines such as "قريب of حد التعثر") is no longer used. */
+const I18N_NUM = /\d+(?:[.,]\d+)?/g;
+function enOne(core) {
+  if (EN[core]) return EN[core];
+  if (I18N[core]) return I18N[core];
+  const nums = core.match(I18N_NUM);
+  if (nums) { const tr = I18N[core.replace(I18N_NUM, "#")]; if (tr) { let i = 0; return tr.replace(/#/g, () => (i < nums.length ? nums[i++] : "#")); } }
+  return null;
+}
+enText = function (t) {
+  const core = String(t).replace(/\s+/g, " ").trim();
+  if (!core || !/[؀-ۿ]/.test(core)) return t;
+  let tr = enOne(core);
+  if (tr == null && core.includes(" · ")) {
+    const parts = core.split(" · ").map((x) => enOne(x) || x);
+    tr = parts.join(" · ");
+  }
+  if (tr == null) { let out = core; EN_PHRASES.forEach(([a, b]) => { if (out.includes(a)) out = out.split(a).join(b); }); tr = out; }
+  const lead = /^\s*/.exec(t)[0], trail = /\s*$/.exec(t)[0];
+  return lead + tr + trail;
+};
+applyLang = function (root) {
+  const en = S.lang === "en";
+  document.documentElement.lang = en ? "en" : "ar"; document.documentElement.dir = en ? "ltr" : "rtl";
+  if (!en || !root) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement && n.parentElement.closest(".cq .stem,.cq .opts,.pii,.skl>span,textarea,.thread,.todo b,[data-keep]") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+  const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+  nodes.forEach((n) => { const t = enText(n.nodeValue); if (t !== n.nodeValue) n.nodeValue = t; });
+  root.querySelectorAll("[placeholder],[aria-label],[title]").forEach((el) => ["placeholder", "aria-label", "title"].forEach((a) => { const v = el.getAttribute(a); if (v) { const t = enText(v); if (t !== v) el.setAttribute(a, t); } }));
+};
+const _toast0 = toast;
+toast = function (msg, bad) { return _toast0(S.lang === "en" ? enText(String(msg)) : msg, bad); };
+
 /* ===== Question quality in the bank, and distractor analysis =====
  * Each bank question carries its difficulty and discrimination from every test it appeared in (10+ students),
  * and objective questions show how many students chose each option when the answers were recorded
@@ -2574,13 +2613,16 @@ function reportButtons(t) {
  * The landing page becomes the school's page: one card per member of the school community.
  * Staff dashboards are read-only. The database decides what each role may read (Row Level Security):
  * only teachers who joined the school, and only the areas of that role. */
+/** Arabic or English text for the new pages (the older pages use the EN dictionary). */
+const T = (ar, en) => (S.lang === "en" ? en : ar);
 const SROLE = {
-  principal: { t: "مديرة المدرسة", d: "صورة شاملة للمدرسة: الإتقان، والمعلمات، والإنذار المبكر، والسلوك، وأولياء الأمور.", tabs: ["overview", "academic", "warning", "behavior", "parents", "staff"] },
-  academic_deputy: { t: "الوكيلة التعليمية", d: "نتائج الاختبارات، والمهارات الأضعف، واختبارات التحسين، والإنذار المبكر.", tabs: ["overview", "academic", "warning", "parents"] },
-  student_deputy: { t: "الوكيلة الطلابية", d: "السلوك والانضباط، والتواصل مع أولياء الأمور، ورموز دخولهم.", tabs: ["overview", "behavior", "parents"] },
-  counselor: { t: "الموجهة الطلابية", d: "الطالبات اللاتي يحتجن متابعة، وأسباب ذلك، والسلوك، وتواصل أولياء الأمور.", tabs: ["overview", "warning", "behavior", "parents"] },
+  principal: { t: "مديرة المدرسة", te: "School principal", d: "صورة شاملة للمدرسة: الإتقان، والمعلمات، والإنذار المبكر، والسلوك، وأولياء الأمور.", de: "The whole school at a glance: mastery, teachers, early warning, behaviour and parents.", tabs: ["overview", "academic", "warning", "behavior", "parents", "staff"] },
+  academic_deputy: { t: "الوكيلة التعليمية", te: "Academic deputy", d: "نتائج الاختبارات، والمهارات الأضعف، واختبارات التحسين، والإنذار المبكر.", de: "Test results, weakest skills, improvement tests and early warning.", tabs: ["overview", "academic", "warning", "parents"] },
+  student_deputy: { t: "الوكيلة الطلابية", te: "Student affairs deputy", d: "السلوك والانضباط، والتواصل مع أولياء الأمور، ورموز دخولهم.", de: "Behaviour and discipline, contact with parents, and their sign-in codes.", tabs: ["overview", "behavior", "parents"] },
+  counselor: { t: "الموجهة الطلابية", te: "Student counsellor", d: "الطالبات اللاتي يحتجن متابعة، وأسباب ذلك، والسلوك، وتواصل أولياء الأمور.", de: "Students who need follow-up and why, behaviour, and parents' contact.", tabs: ["overview", "warning", "behavior", "parents"] },
 };
-const STAB = { overview: "نظرة عامة", academic: "التحصيل والإتقان", warning: "الإنذار المبكر", behavior: "السلوك", parents: "أولياء الأمور", staff: "منسوبات المدرسة" };
+const STAB = { overview: ["نظرة عامة", "Overview"], academic: ["التحصيل والإتقان", "Achievement and mastery"], warning: ["الإنذار المبكر", "Early warning"], behavior: ["السلوك", "Behaviour"], parents: ["أولياء الأمور", "Parents"], staff: ["منسوبات المدرسة", "School staff"] };
+const rT = (R) => T(R.t, R.te), rD = (R) => T(R.d, R.de), tabT = (k) => T(STAB[k][0], STAB[k][1]);
 const SICON = {
   teacher: '<path d="M4 19V6a2 2 0 0 1 2-2h12v15H6a2 2 0 0 0-2 2Zm0 0a2 2 0 0 1 2-2h12"/><path d="M9 8h6M9 11h4"/>',
   student: '<path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/>',
@@ -2605,83 +2647,80 @@ const MXI = {
 const mxico = (k, n = 26) => `<svg viewBox="0 0 24 24" width="${n}" height="${n}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MXI[k] || SICON[k]}</svg>`;
 const mxNum = (n) => (n >= 1e6 ? (Math.round(n / 1e5) / 10) + "M" : n >= 1e4 ? (Math.round(n / 100) / 10) + "K" : String(n));
 /** Itqan's own artwork: the mastery loop (measure → analyse → treat → re-assess) around a skills map. */
-const MX_ART = (() => {
+const MX_ART = () => {
   const cells = [3, 3, 2, 3, 1, 2, 3, 2, 3, 3, 1, 3, 2, 3, 3, 2, 3, 1, 3, 3, 2, 3, 3, 3, 3]; // 1 low · 2 mid · 3 mastered
   const col = { 1: "#e8a493", 2: "#f0cf7a", 3: "#7fc4a8" };
   const grid = cells.map((v, i) => `<rect x="${172 + (i % 5) * 24}" y="${172 + Math.floor(i / 5) * 24}" width="18" height="18" rx="4" fill="${col[v]}"/>`).join("");
   const node = (x, y, t, n) => { const w = t.split(" "), lines = w.map((v, k) => `<text x="${x}" y="${y + 6 + (k - (w.length - 1) / 2) * 20}" text-anchor="middle" font-size="${w.length > 1 ? 15 : 17}" font-weight="700" fill="#0e3f3c">${v}</text>`).join("");
     return `<g><circle cx="${x}" cy="${y}" r="44" fill="#fff" stroke="#0e3f3c" stroke-width="2.5"/>${lines}<circle cx="${x + 32}" cy="${y - 32}" r="13" fill="#c9962b"/><text x="${x + 32}" y="${y - 27}" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">${n}</text></g>`; };
-  return `<svg class="mx-art" viewBox="0 0 480 480" role="img" aria-label="حلقة الإتقان: نقيس، نحلّل، نعالج، نعيد التقويم">
+  return `<svg class="mx-art" viewBox="0 0 480 480" role="img" aria-label="${T("حلقة الإتقان: نقيس، نحلّل، نعالج، نعيد التقويم", "The mastery loop: measure, analyse, treat, re-assess")}">
     <circle cx="240" cy="240" r="170" fill="none" stroke="#dbe6e1" stroke-width="16"/>
     <path d="M240 70A170 170 0 1 1 110 130" fill="none" stroke="#1f5e57" stroke-width="16" stroke-linecap="round"/>
     <path d="M98 150l16-30 20 24z" fill="#c9962b"/>
     <rect x="160" y="160" width="160" height="160" rx="18" fill="#fff" stroke="#dbe6e1" stroke-width="2"/>${grid}
-    ${node(240, 70, "نقيس", "1")}${node(410, 240, "نحلّل", "2")}${node(240, 410, "نعالج", "3")}${node(70, 240, "نعيد التقويم", "4")}
+    ${node(240, 70, T("نقيس", "Measure"), "1")}${node(410, 240, T("نحلّل", "Analyse"), "2")}${node(240, 410, T("نعالج", "Treat"), "3")}${node(70, 240, T("نعيد التقويم", "Re-assess"), "4")}
   </svg>`;
-})();
+};
 renderLanding = function () {
   const s = S.settings, card = (k, t, d, act) => `<button class="sp-role" data-act="${act}" data-r="${k}"><i>${sico(k)}</i><b>${t}</b><span>${d}</span></button>`;
   const c = (S.pub && S.pub.counts) || null;
-  const figs = c ? [["school", c.schools, "مدرسة"], ["teacher", c.teachers, "معلمة"], ["student", c.students, "طالبة مستفيدة"], ["bank", c.questions, "سؤالًا في بنوك المهارات"], ["test", c.tests, "اختبارًا مصحّحًا"], ["improve", c.improve, "اختبار تحسين فردي"]].filter((f) => f[1] > 0) : [];
+  const figs = c ? [["school", c.schools, T("مدرسة", "schools")], ["teacher", c.teachers, T("معلمة", "teachers")], ["student", c.students, T("طالبة مستفيدة", "students served")], ["bank", c.questions, T("سؤالًا في بنوك المهارات", "questions in skill banks")], ["test", c.tests, T("اختبارًا مصحّحًا", "tests marked")], ["improve", c.improve, T("اختبار تحسين فردي", "individual improvement tests")]].filter((f) => f[1] > 0) : [];
   app.innerHTML = `<div class="sp mx">
     <header class="mx-nav">
-      <div class="mx-logo"><span class="mark">✓</span><div><b>إتقان</b><small dir="ltr">itqanloop</small></div></div>
-      <nav class="mx-links" aria-label="أقسام الصفحة"><button data-act="mxGo" data-to="mx-why">عن إتقان</button><button data-act="mxGo" data-to="mx-roles">الدخول</button>${figs.length ? `<button data-act="mxGo" data-to="mx-num">إتقان في أرقام</button>` : ""}<button data-act="mxGo" data-to="mx-awards">الجوائز</button></nav>
-      <div class="mx-tools"><button class="mx-tool" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button><button class="mx-tool" data-act="mxGo" data-to="mx-roles">${mxico("user", 22)}<span>تسجيل الدخول</span></button></div>
+      <div class="mx-logo"><span class="mark">✓</span><div><b>${T("إتقان", "Itqan")}</b><small dir="ltr">itqanloop</small></div></div>
+      <nav class="mx-links" aria-label="${T("أقسام الصفحة", "Page sections")}"><button data-act="mxGo" data-to="mx-why">${T("عن إتقان", "About Itqan")}</button><button data-act="mxGo" data-to="mx-roles">${T("الدخول", "Sign in")}</button>${figs.length ? `<button data-act="mxGo" data-to="mx-num">${T("إتقان في أرقام", "Itqan in numbers")}</button>` : ""}<button data-act="mxGo" data-to="mx-awards">${T("الجوائز", "Awards")}</button></nav>
+      <div class="mx-tools"><button class="mx-tool" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button><button class="mx-tool" data-act="mxGo" data-to="mx-roles">${mxico("user", 22)}<span>${T("تسجيل الدخول", "Sign in")}</span></button></div>
     </header>
     <section class="mx-hero">
       <div class="mx-hero-in">
         ${S.schoolPage ? `<span class="mx-chip">${S.schoolPage.logo ? `<img src="${esc(S.schoolPage.logo)}" alt="">` : ""}<span data-keep>${esc(S.schoolPage.name)}</span></span>` : ""}
-        <h1>التقويم لا يكتمل عند الدرجة… بل عند الإتقان</h1>
-        <p>إتقان لا تعطي درجة فقط… بل تحوّلها إلى <b>خريطة طريق نحو الإتقان</b>.<br><span>نقيس • نحلّل • نعالج • نعيد التقويم</span></p>
-        <button class="mx-btn" data-act="mxGo" data-to="mx-roles">تسجيل الدخول</button>
+        <h1>${T("التقويم لا يكتمل عند الدرجة… بل عند الإتقان", "Assessment isn't complete at the grade… only at mastery")}</h1>
+        <p>${T("إتقان لا تعطي درجة فقط… بل تحوّلها إلى <b>خريطة طريق نحو الإتقان</b>.", "Itqan doesn't just give a grade… it turns it into a <b>roadmap to mastery</b>.")}<br><span>${T("نقيس • نحلّل • نعالج • نعيد التقويم", "Measure • Analyse • Treat • Re-assess")}</span></p>
+        <button class="mx-btn" data-act="mxGo" data-to="mx-roles">${T("تسجيل الدخول", "Sign in")}</button>
       </div>
-      <div class="mx-hero-art">${MX_ART}</div>
+      <div class="mx-hero-art">${MX_ART()}</div>
     </section>
-    <section class="mx-sec mx-why" id="mx-why"><h2>من سباق على الدرجات… إلى رحلة نحو الإتقان</h2>
-      <p class="mx-lead">معظم المنصات تتوقف عند الدرجة. أما إتقان فتحدد <b>الفجوة</b> و<b>المهارات المفقودة</b> و<b>المستوى المعرفي</b>، ليُبنى عليها التقويم والعلاج.</p>
+    <section class="mx-sec mx-why" id="mx-why"><h2>${T("من سباق على الدرجات… إلى رحلة نحو الإتقان", "From a race for grades… to a journey towards mastery")}</h2>
+      <p class="mx-lead">${T("معظم المنصات تتوقف عند الدرجة. أما إتقان فتحدد <b>الفجوة</b> و<b>المهارات المفقودة</b> و<b>المستوى المعرفي</b>، ليُبنى عليها التقويم والعلاج.", "Most platforms stop at the grade. Itqan identifies the <b>gap</b>, the <b>missing skills</b> and the <b>cognitive level</b>, so that assessment and treatment are built on them.")}</p>
       <div class="mx-vs">
-        <div class="mx-vs-a"><small>المعتاد</small><b>14 من 20</b><span>درجة تُسجَّل… ويتوقف الأمر عندها.</span></div>
-        <div class="mx-vs-arrow" aria-hidden="true">←</div>
-        <div class="mx-vs-b"><small>في إتقان</small><b>خريطة طريق</b><span>ما أتقنته الطالبة، وما ينقصها من مهارات، وفي أي مستوى معرفي: المعرفة أو التطبيق أو الاستدلال، ثم علاج يُعاد بعده التقويم في مهاراتها الناقصة وحدها.</span></div>
+        <div class="mx-vs-a"><small>${T("المعتاد", "Usually")}</small><b>${T("14 من 20", "14 / 20")}</b><span>${T("درجة تُسجَّل… ويتوقف الأمر عندها.", "A grade is recorded… and that's where it ends.")}</span></div>
+        <div class="mx-vs-arrow" aria-hidden="true">${T("←", "→")}</div>
+        <div class="mx-vs-b"><small>${T("في إتقان", "In Itqan")}</small><b>${T("خريطة طريق", "A roadmap")}</b><span>${T("ما أتقنته الطالبة، وما ينقصها من مهارات، وفي أي مستوى معرفي: المعرفة أو التطبيق أو الاستدلال، ثم علاج يُعاد بعده التقويم في مهاراتها الناقصة وحدها.", "What the student has mastered, which skills she is missing and at which cognitive level (knowing, applying or reasoning), then treatment followed by re-assessment in her missing skills only.")}</span></div>
       </div>
       <div class="mx-pillars">
-        <div><b>تشخيص لا تصنيف</b><span>الفجوة عن الإتقان لكل طالبة ولكل مهارة، لا ترتيبها بين زميلاتها.</span></div>
-        <div><b>علاج مبني على الدليل</b><span>القرار علاج أو دعم أو إثراء، بحسب ما تكشفه المهارات والمستوى المعرفي.</span></div>
-        <div><b>ثقافة التعلم بالمهارات</b><span>حين تعرف الطالبة مهاراتها يتحول التعلم من سباق على الدرجات إلى رحلة نحو الإتقان.</span></div>
+        <div><b>${T("تشخيص لا تصنيف", "Diagnosis, not ranking")}</b><span>${T("الفجوة عن الإتقان لكل طالبة ولكل مهارة، لا ترتيبها بين زميلاتها.", "Each student's gap to mastery in each skill, not her rank among her classmates.")}</span></div>
+        <div><b>${T("علاج مبني على الدليل", "Evidence-based treatment")}</b><span>${T("القرار علاج أو دعم أو إثراء، بحسب ما تكشفه المهارات والمستوى المعرفي.", "The decision is remediation, support or enrichment, based on what the skills and cognitive level reveal.")}</span></div>
+        <div><b>${T("ثقافة التعلم بالمهارات", "A culture of skills-based learning")}</b><span>${T("حين تعرف الطالبة مهاراتها يتحول التعلم من سباق على الدرجات إلى رحلة نحو الإتقان.", "When students know their skills, learning turns from a race for grades into a journey towards mastery.")}</span></div>
       </div>
     </section>
-    <section class="mx-sec" id="mx-roles"><h2>الدخول إلى المنصة</h2><p class="muted">اختاري صفتك في المدرسة.</p>
+    <section class="mx-sec" id="mx-roles"><h2>${T("الدخول إلى المنصة", "Sign in to the platform")}</h2><p class="muted">${T("اختاري صفتك في المدرسة.", "Choose your role in the school.")}</p>
       <div class="sp-roles">
-        ${card("teacher", "المعلمات", "المهارات، بنك الأسئلة، الاختبارات، التصحيح، التحليل، واختبارات التحسين.", "asTeacher")}
-        ${card("student", "الطالبة", "تقرير مهاراتي، واختباراتي، ومهامي الأدائية.", "spPin")}
-        ${card("parent", "وليّ الأمر", "متابعة ابنتك أو بناتك برمز وليّ الأمر.", "spPin")}
-        ${card("principal", "مديرة المدرسة", SROLE.principal.d, "spStaff")}
-        ${card("academic_deputy", "الوكيلة التعليمية", SROLE.academic_deputy.d, "spStaff")}
-        ${card("student_deputy", "الوكيلة الطلابية", SROLE.student_deputy.d, "spStaff")}
-        ${card("counselor", "الموجهة الطلابية", SROLE.counselor.d, "spStaff")}
+        ${card("teacher", T("المعلمات", "Teachers"), T("المهارات، بنك الأسئلة، الاختبارات، التصحيح، التحليل، واختبارات التحسين.", "Skills, question bank, tests, marking, analysis and improvement tests."), "asTeacher")}
+        ${card("student", T("الطالبة", "Student"), T("تقرير مهاراتي، واختباراتي، ومهامي الأدائية.", "My skills report, my tests and my performance tasks."), "spPin")}
+        ${card("parent", T("وليّ الأمر", "Parent"), T("متابعة ابنتك أو بناتك برمز وليّ الأمر.", "Follow your daughter or daughters with the parent code."), "spPin")}
+        ${["principal", "academic_deputy", "student_deputy", "counselor"].map((k) => card(k, rT(SROLE[k]), rD(SROLE[k]), "spStaff")).join("")}
       </div>
-      <form class="door sp-pin" id="loginForm"><b>دخول الطالبة ووليّ الأمر</b><span>أدخلي الرقم السري (أو رمز وليّ الأمر) لعرض تقرير المهارات.</span>
-        <div class="row"><input id="nid" type="password" inputmode="numeric" autocomplete="off" placeholder="الرقم السري" aria-label="الرقم السري"><button class="btn" type="submit">دخول</button></div>
+      <form class="door sp-pin" id="loginForm"><b>${T("دخول الطالبة ووليّ الأمر", "Student and parent sign-in")}</b><span>${T("أدخلي الرقم السري (أو رمز وليّ الأمر) لعرض تقرير المهارات.", "Enter the PIN (or the parent code) to see the skills report.")}</span>
+        <div class="row"><input id="nid" type="password" inputmode="numeric" autocomplete="off" placeholder="${T("الرقم السري", "PIN")}" aria-label="${T("الرقم السري", "PIN")}"><button class="btn" type="submit">${T("دخول", "Sign in")}</button></div>
         <small id="loginErr" class="err"></small></form>
     </section>
-    ${figs.length ? `<section class="mx-sec mx-num" id="mx-num"><h2>إتقان في أرقام</h2>
+    ${figs.length ? `<section class="mx-sec mx-num" id="mx-num"><h2>${T("إتقان في أرقام", "Itqan in numbers")}</h2>
       <div class="mx-figs">${figs.map(([k, n, l]) => `<div class="mx-fig"><i>${mxico(k)}</i><b dir="ltr" data-n="${n}">+${mxNum(n)}</b><span>${l}</span></div>`).join("")}</div>
-      <p class="muted mx-note">تُحسب هذه الأرقام تلقائيًا من المنصة، ولا تتضمن أي اسم أو بيانات شخصية.</p></section>` : ""}
+      <p class="muted mx-note">${T("تُحسب هذه الأرقام تلقائيًا من المنصة، ولا تتضمن أي اسم أو بيانات شخصية.", "These figures are counted automatically by the platform and contain no names or personal data.")}</p></section>` : ""}
     <section class="mx-award" id="mx-awards">
       <div class="mx-award-in">
-        <div class="mx-award-txt"><h2>الجوائز والإشادات</h2>
-          <p>حصلت منصة «إتقان» على <b>الميدالية الفضية</b> في <b>معرض ومسابقة الأمن والابتكار العالمية (SAIF)</b>، تقديرًا لفكرتها في قياس إتقان المهارات وعلاج الفجوات حتى تصل كل طالبة إلى الإتقان.</p></div>
-        <figure class="mx-medal"><img src="${AWARD_IMG}" alt="الميدالية الفضية لمنصة إتقان في معرض ومسابقة SAIF" loading="lazy" width="400" height="403"><figcaption>الميدالية الفضية · SAIF</figcaption></figure>
+        <div class="mx-award-txt"><h2>${T("الجوائز والإشادات", "Awards and recognition")}</h2>
+          <p>${T("حصلت منصة «إتقان» على <b>الميدالية الفضية</b> في <b>معرض ومسابقة الأمن والابتكار العالمية (SAIF)</b>، تقديرًا لفكرتها في قياس إتقان المهارات وعلاج الفجوات حتى تصل كل طالبة إلى الإتقان.", "Itqan won the <b>silver medal</b> at the <b>Security and Innovation Fair and Competition (SAIF)</b>, in recognition of its idea of measuring skill mastery and closing gaps until every student reaches mastery.")}</p></div>
+        <figure class="mx-medal"><img src="${AWARD_IMG}" alt="${T("الميدالية الفضية لمنصة إتقان في معرض ومسابقة SAIF", "Itqan's silver medal at SAIF")}" loading="lazy" width="400" height="403"><figcaption>${T("الميدالية الفضية · SAIF", "Silver medal · SAIF")}</figcaption></figure>
       </div>
     </section>
-    <section class="mx-sec" id="mx-how"><h2>كيف تعمل إتقان</h2>
-      <div class="hook"><b>طالبتان… الدرجة نفسها 14 من 20… والفجوة مختلفة.</b><span>الدرجة الكلية تُخفي المهارة الناقصة، فيُعاد الشرح للجميع ويضيع الجهد.</span></div>
-      <ol class="hsteps"><li><b>يربط</b><span>كل سؤال بمهارته ومستواه المعرفي</span></li><li><b>يشخّص</b><span>فجوة كل طالبة عن الإتقان</span></li><li><b>يقرّر</b><span>علاج أو دعم أو إثراء</span></li><li><b>يعيد التقويم</b><span>في مهاراتها الناقصة وحدها</span></li></ol>
+    <section class="mx-sec" id="mx-how"><h2>${T("كيف تعمل إتقان", "How Itqan works")}</h2>
+      <div class="hook"><b>${T("طالبتان… الدرجة نفسها 14 من 20… والفجوة مختلفة.", "Two students… the same 14 out of 20… and different gaps.")}</b><span>${T("الدرجة الكلية تُخفي المهارة الناقصة، فيُعاد الشرح للجميع ويضيع الجهد.", "The total score hides the missing skill, so everything is re-taught to everyone and effort is wasted.")}</span></div>
+      <ol class="hsteps"><li><b>${T("يربط", "Links")}</b><span>${T("كل سؤال بمهارته ومستواه المعرفي", "every question to its skill and cognitive level")}</span></li><li><b>${T("يشخّص", "Diagnoses")}</b><span>${T("فجوة كل طالبة عن الإتقان", "each student's gap to mastery")}</span></li><li><b>${T("يقرّر", "Decides")}</b><span>${T("علاج أو دعم أو إثراء", "remediation, support or enrichment")}</span></li><li><b>${T("يعيد التقويم", "Re-assesses")}</b><span>${T("في مهاراتها الناقصة وحدها", "in her missing skills only")}</span></li></ol>
     </section>
     <footer class="mx-foot">
-      <div class="mx-foot-in"><div class="mx-logo"><span class="mark">✓</span><div><b>إتقان</b><small dir="ltr">itqanloop.com</small></div></div>
-      <p>بيانات الطالبات محفوظة ومشفّرة، ولا يرى كل دور إلا ما يخصه.</p></div></footer>
+      <div class="mx-foot-in"><div class="mx-logo"><span class="mark">✓</span><div><b>${T("إتقان", "Itqan")}</b><small dir="ltr">itqanloop.com</small></div></div>
+      <p>${T("بيانات الطالبات محفوظة ومشفّرة، ولا يرى كل دور إلا ما يخصه.", "Student data is stored encrypted, and each role sees only what concerns it.")}</p></div></footer>
   </div>`;
   document.body.classList.remove("priv"); applyLang(app); mxCount();
 };
@@ -2705,11 +2744,11 @@ function mxCount() {
   els.forEach((el) => io.observe(el)); // the real figure stays visible until the animation starts
 }
 A.mxGo = (el) => { const t = document.getElementById(el.dataset.to); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); };
-A.spPin = (el) => { const i = $("#nid"); if (!i) return; i.placeholder = el.dataset.r === "parent" ? "رمز وليّ الأمر" : "الرقم السري"; i.closest("form").scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => i.focus(), 300); };
+A.spPin = (el) => { const i = $("#nid"); if (!i) return; i.placeholder = el.dataset.r === "parent" ? T("رمز وليّ الأمر", "Parent code") : T("الرقم السري", "PIN"); i.closest("form").scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => i.focus(), 300); };
 A.spStaff = (el) => {
-  const r = el.dataset.r, t = SROLE[r].t;
+  const r = el.dataset.r, t = rT(SROLE[r]);
   if (Store.demoStaff) return guard(async () => { S.role = "staff"; S.staffAs = r; S.ui.stTab = SROLE[r].tabs[0]; S.loaded = false; render(); await loadAll(); render(); window.scrollTo(0, 0); });
-  modal(`<h3>دخول ${t}</h3><p class="muted">بالبريد الإلكتروني وكلمة المرور اللذين وصلا في دعوة المديرة.</p><form id="tpForm" data-mode="enter"><label class="fld">البريد الإلكتروني<input id="tpE" type="email" autocomplete="username" dir="ltr" required></label><label class="fld">كلمة المرور<input id="tp1" type="password" autocomplete="current-password" required></label><small id="tpErr" class="err"></small><div class="row end"><button class="lnk" type="button" data-act="tpForgot">نسيت كلمة المرور</button><button class="btn" type="submit">دخول</button></div></form>`);
+  modal(`<h3>${T("دخول " + t, "Sign in: " + t)}</h3><p class="muted">${T("بالبريد الإلكتروني وكلمة المرور اللذين وصلا في دعوة المديرة.", "With the e-mail and password from the principal's invitation.")}</p><form id="tpForm" data-mode="enter"><label class="fld">البريد الإلكتروني<input id="tpE" type="email" autocomplete="username" dir="ltr" required></label><label class="fld">كلمة المرور<input id="tp1" type="password" autocomplete="current-password" required></label><small id="tpErr" class="err"></small><div class="row end"><button class="lnk" type="button" data-act="tpForgot">نسيت كلمة المرور</button><button class="btn" type="submit">دخول</button></div></form>`);
 };
 
 /* ---------- staff dashboards (read-only) ---------- */
@@ -2726,12 +2765,12 @@ function renderStaff() {
   const s = S.settings, role = staffRole(), R = SROLE[role] || SROLE.principal, tab = R.tabs.includes(S.ui.stTab) ? S.ui.stTab : R.tabs[0];
   const logo = s.logo ? `<img class="slogo" src="${esc(s.logo)}" alt="">` : `<span class="mark">✓</span>`;
   app.innerHTML = `
-  <header class="top"><div class="brand">${logo}<div><b>إتقان</b><span data-keep>${esc(s.school)}</span></div></div>
-    <div class="who"><span>${R.t}</span><button class="btn sm ${S.ui.reveal ? "" : "ghost"}" data-act="reveal" aria-pressed="${S.ui.reveal ? "true" : "false"}">${EYE} ${S.ui.reveal ? "إخفاء الأسماء" : "إظهار الأسماء"}</button><button class="btn ghost sm" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button><button class="btn ghost sm" data-act="logout">خروج</button></div></header>
-  <nav class="tabs" aria-label="أقسام لوحة ${R.t}">${R.tabs.map((k) => `<a href="#" data-act="stTab" data-k="${k}" class="${tab === k ? "on" : ""}">${STAB[k]}</a>`).join("")}</nav>
+  <header class="top"><div class="brand">${logo}<div><b>${T("إتقان", "Itqan")}</b><span data-keep>${esc(s.school)}</span></div></div>
+    <div class="who"><span>${rT(R)}</span><button class="btn sm ${S.ui.reveal ? "" : "ghost"}" data-act="reveal" aria-pressed="${S.ui.reveal ? "true" : "false"}">${EYE} ${S.ui.reveal ? T("إخفاء الأسماء", "Hide names") : T("إظهار الأسماء", "Show names")}</button><button class="btn ghost sm" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button><button class="btn ghost sm" data-act="logout">${T("خروج", "Sign out")}</button></div></header>
+  <nav class="tabs" aria-label="${rT(R)}">${R.tabs.map((k) => `<a href="#" data-act="stTab" data-k="${k}" class="${tab === k ? "on" : ""}">${tabT(k)}</a>`).join("")}</nav>
   ${S.loadError ? `<div class="note bad">${esc(S.loadError)}</div>` : ""}
-  ${Store.demoStaff ? `<div class="note demo"><span><b>نسخة تجريبية.</b> تعرض اللوحة بيانات معلمة واحدة انضمت إلى المدرسة. في الموقع الحقيقي تظهر هنا كل معلمة تنضم.</span></div>` : ""}
-  <div class="note">لوحة للاطلاع فقط: لا تغيّر الدرجات ولا بيانات المعلمات. ولا تظهر فيها إلا بيانات المعلمات اللاتي انضممن إلى المدرسة.</div>
+  ${Store.demoStaff ? `<div class="note demo"><span>${T("<b>نسخة تجريبية.</b> تعرض اللوحة بيانات معلمة واحدة انضمت إلى المدرسة. في الموقع الحقيقي تظهر هنا كل معلمة تنضم.", "<b>Demo.</b> This dashboard shows one teacher who joined the school. On the real site every teacher who joins appears here.")}</span></div>` : ""}
+  <div class="note">${T("لوحة للاطلاع فقط: لا تغيّر الدرجات ولا بيانات المعلمات. ولا تظهر فيها إلا بيانات المعلمات اللاتي انضممن إلى المدرسة.", "Read-only dashboard: it never changes marks or teachers' data, and shows only teachers who joined the school.")}</div>
   <main id="view">${({ overview: stOverview, academic: stAcademic, warning: stWarning, behavior: stBehavior, parents: stParents, staff: stStaff }[tab])()}</main>`;
   document.body.classList.toggle("priv", !S.ui.reveal);
   document.body.classList.add("staff");
@@ -2752,9 +2791,9 @@ function stOverview() {
   const classes = [...new Set(S.roster.map((x) => x.cls))];
   const n = tests.reduce((a, r) => a + r.n, 0), w = (k) => (n ? Math.round((tests.reduce((a, r) => a + r[k] * r.n, 0) / n) * 10) / 10 : 0);
   return `<section class="card"><h2>${esc(S.settings.school)}</h2>
-    <div class="grid4"><div class="tile"><b>${teachers.length}</b><span>معلمة منضمة</span></div><div class="tile"><b>${new Set(S.roster.map((x) => x.name)).size}</b><span>طالبة</span></div><div class="tile"><b>${classes.length}</b><span>فصلًا</span></div><div class="tile"><b>${doneTests().length}</b><span>اختبارًا مصحّحًا</span></div></div>
-    <div class="grid4"><div class="tile"><b dir="ltr" style="font-size:1.45rem">${w("before")}% → ${w("after")}%</b><span>متوسط الإتقان قبل التحسين وبعده (آخر اختبار لكل معلمة)</span></div><div class="tile"><b>${hi}</b><span>طالبة في خطر مرتفع</span></div><div class="tile"><b>${mid}</b><span>تحتاج متابعة</span></div><div class="tile"><b>${ackRate()}%</b><span>اطلاع أولياء الأمور على آخر تقرير</span></div></div></section>
-  <section class="card"><h2>المعلمات والمواد</h2><div class="scroll"><table class="tbl"><thead><tr><th>المعلمة</th><th>المادة</th><th>الصف</th><th>آخر اختبار</th><th>الطالبات</th><th>الإتقان قبل ← بعد</th><th>SD</th></tr></thead><tbody>
+    <div class="grid4"><div class="tile"><b>${teachers.length}</b><span>${T("معلمة منضمة", "teachers joined")}</span></div><div class="tile"><b>${new Set(S.roster.map((x) => x.name)).size}</b><span>${T("طالبة", "students")}</span></div><div class="tile"><b>${classes.length}</b><span>${T("فصلًا", "classes")}</span></div><div class="tile"><b>${doneTests().length}</b><span>${T("اختبارًا مصحّحًا", "tests marked")}</span></div></div>
+    <div class="grid4"><div class="tile"><b dir="ltr" style="font-size:1.45rem">${w("before")}% → ${w("after")}%</b><span>${T("متوسط الإتقان قبل التحسين وبعده (آخر اختبار لكل معلمة)", "Mean mastery before and after improvement (each teacher's latest test)")}</span></div><div class="tile"><b>${hi}</b><span>${T("طالبة في خطر مرتفع", "students at high risk")}</span></div><div class="tile"><b>${mid}</b><span>${T("تحتاج متابعة", "need follow-up")}</span></div><div class="tile"><b>${ackRate()}%</b><span>${T("اطلاع أولياء الأمور على آخر تقرير", "of parents saw the latest report")}</span></div></div></section>
+  <section class="card"><h2>${T("المعلمات والمواد", "Teachers and subjects")}</h2><div class="scroll"><table class="tbl"><thead><tr><th>${T("المعلمة", "Teacher")}</th><th>${T("المادة", "Subject")}</th><th>${T("الصف", "Grade")}</th><th>${T("آخر اختبار", "Latest test")}</th><th>${T("الطالبات", "Students")}</th><th>${T("الإتقان قبل ← بعد", "Mastery before → after")}</th><th>SD</th></tr></thead><tbody>
     ${teachers.map((tc) => { const r = tests.find((x) => (x.t._teacher || "me") === tc.id) || (tc.id === "me" ? tests[0] : null); return `<tr><td data-keep>${esc(tc.name)}</td><td>${esc(tc.subject)}</td><td>${esc(tc.grade || "")}</td><td>${r ? esc(r.t.name) : "—"}</td><td class="num">${r ? r.n : "—"}</td><td class="num"><bdi dir="ltr">${r ? `${r.before}% → ${r.after}%` : "—"}</bdi></td><td class="num">${r ? fmt(r.sd) : "—"}</td></tr>`; }).join("")}
   </tbody></table></div></section>`;
 }
@@ -2766,52 +2805,52 @@ function ackRate() {
 }
 function stAcademic() {
   const rows = doneTests().map(testRow);
-  if (!rows.length) return `<section class="card"><h2>التحصيل والإتقان</h2><p class="muted">لا توجد اختبارات مصحّحة بعد.</p></section>`;
-  const last = rows[0], g = last.g, L = { K: "المعرفة", A: "التطبيق", R: "الاستدلال" };
+  if (!rows.length) return `<section class="card"><h2>${tabT("academic")}</h2><p class="muted">${T("لا توجد اختبارات مصحّحة بعد.", "No marked tests yet.")}</p></section>`;
+  const last = rows[0], g = last.g, L = { K: T("المعرفة", "Knowing"), A: T("التطبيق", "Applying"), R: T("الاستدلال", "Reasoning") };
   const cls = [...new Set(S.roster.filter((x) => last.t.results[x.id]).map((x) => x.cls))];
-  return `<section class="card"><h2>الاختبارات</h2><div class="scroll"><table class="tbl"><thead><tr><th>الاختبار</th><th>المعلمة</th><th>التاريخ</th><th>الطالبات</th><th>قبل التحسين</th><th>بعد التحسين</th><th>SD</th><th>أتقنّ (80%+)</th><th>أقل من 60%</th></tr></thead><tbody>
+  return `<section class="card"><h2>${T("الاختبارات", "Tests")}</h2><div class="scroll"><table class="tbl"><thead><tr><th>${T("الاختبار", "Test")}</th><th>${T("المعلمة", "Teacher")}</th><th>${T("التاريخ", "Date")}</th><th>${T("الطالبات", "Students")}</th><th>${T("قبل التحسين", "Before improvement")}</th><th>${T("بعد التحسين", "After improvement")}</th><th>SD</th><th>${T("أتقنّ (80%+)", "Mastered (80%+)")}</th><th>${T("أقل من 60%", "Below 60%")}</th></tr></thead><tbody>
     ${rows.map((r) => `<tr><td>${esc(r.t.name)}</td><td data-keep>${esc(tName(r.t._teacher))}</td><td class="num">${esc(r.t.date || "")}</td><td class="num">${r.n}</td><td class="num">${r.before}%</td><td class="num">${r.after}%</td><td class="num">${fmt(r.sd)}</td><td class="num">${r.mastered}</td><td class="num">${r.low}</td></tr>`).join("")}
   </tbody></table></div></section>
-  <section class="card"><h2>${esc(last.t.name)}: حسب الفصل</h2><div class="scroll"><table class="tbl"><thead><tr><th>الفصل</th><th>الطالبات</th><th>قبل</th><th>بعد</th><th>أقل من 60%</th></tr></thead><tbody>
+  <section class="card"><h2>${esc(last.t.name)}: ${T("حسب الفصل", "by class")}</h2><div class="scroll"><table class="tbl"><thead><tr><th>${T("الفصل", "Class")}</th><th>${T("الطالبات", "Students")}</th><th>${T("قبل", "Before")}</th><th>${T("بعد", "After")}</th><th>${T("أقل من 60%", "Below 60%")}</th></tr></thead><tbody>
     ${cls.map((c) => { const x = groupStats(last.t, c), tot = testMax(last.t); return `<tr><td>${esc(c)}</td><td class="num">${x.n}</td><td class="num">${pct(x.mean0, tot)}%</td><td class="num">${pct(x.mean, tot)}%</td><td class="num">${x.low}</td></tr>`; }).join("")}
   </tbody></table></div>
-  <h3>حسب المستوى المعرفي</h3><div class="grid4">${Object.entries(g.levels).filter(([, v]) => v.t).map(([k, v]) => `<div class="tile"><b dir="ltr">${pct(v.c0, v.t)}% → ${pct(v.c, v.t)}%</b><span>${L[k]}</span></div>`).join("")}</div>
-  <h3>المهارات الأضعف</h3><ul class="ew">${g.skills.slice(0, 6).map((o) => `<li class="${o.pct < 50 ? "high" : o.pct < 65 ? "mid" : "ok"}"><div><strong>${esc((sk(o.id) || {}).name || o.id)}</strong><span>الإتقان ${o.pct0}% ← ${o.pct}% بعد التحسين · ${o.low} طالبة أقل من 50%</span></div></li>`).join("")}</ul></section>`;
+  <h3>${T("حسب المستوى المعرفي", "By cognitive level")}</h3><div class="grid4">${Object.entries(g.levels).filter(([, v]) => v.t).map(([k, v]) => `<div class="tile"><b dir="ltr">${pct(v.c0, v.t)}% → ${pct(v.c, v.t)}%</b><span>${L[k]}</span></div>`).join("")}</div>
+  <h3>${T("المهارات الأضعف", "Weakest skills")}</h3><ul class="ew">${g.skills.slice(0, 6).map((o) => `<li class="${o.pct < 50 ? "high" : o.pct < 65 ? "mid" : "ok"}"><div><strong>${esc((sk(o.id) || {}).name || o.id)}</strong><span>${T(`الإتقان ${o.pct0}% ← ${o.pct}% بعد التحسين · ${o.low} طالبة أقل من 50%`, `Mastery ${o.pct0}% → ${o.pct}% after improvement · ${o.low} students below 50%`)}</span></div></li>`).join("")}</ul></section>`;
 }
 function stWarning() {
   const all = S.roster.map((st) => risk(st.id, true)).filter(Boolean), show = all.filter((r) => r.level !== "ok").sort((a, b) => b.pts - a.pts);
-  return `<section class="card ewcard"><div class="hd"><h2>الإنذار المبكر قبل التعثر</h2><div class="legend"><span><i class="sq low"></i>${all.filter((r) => r.level === "high").length} خطر مرتفع</span><span><i class="sq mid"></i>${all.filter((r) => r.level === "mid").length} تحتاج متابعة</span><span><i class="sq high"></i>${all.filter((r) => r.level === "ok").length} مطمئنة</span></div></div>
-    ${show.length ? `<ul class="ew">${show.slice(0, S.ui.ewAll ? 999 : 15).map((r) => { const st = stu(r.sid); return `<li class="${r.level}"><div><strong>${nm(st)} <small class="muted">${esc(st.cls)}${S.teachers ? " · " + esc(tName(st._teacher)) : ""}</small></strong><span>${r.why.map(esc).join(" · ")}</span></div></li>`; }).join("")}</ul>${show.length > 15 && !S.ui.ewAll ? `<button class="lnk" data-act="ewAll">عرض الكل (${show.length})</button>` : ""}` : `<p class="note ok">لا توجد طالبة في دائرة الخطر حاليًا.</p>`}
-    <p class="muted">المؤشر نفسه الذي تراه المعلمة: الإتقان في آخر اختبار، والمهارات الأقل من ${EW.low}%، والتراجع، والمخالفات خلال ${EW.behDays} يومًا، ومتابعة وليّ الأمر.</p></section>`;
+  return `<section class="card ewcard"><div class="hd"><h2>${T("الإنذار المبكر قبل التعثر", "Early warning before failure")}</h2><div class="legend"><span><i class="sq low"></i>${all.filter((r) => r.level === "high").length} ${T("خطر مرتفع", "high risk")}</span><span><i class="sq mid"></i>${all.filter((r) => r.level === "mid").length} ${T("تحتاج متابعة", "need follow-up")}</span><span><i class="sq high"></i>${all.filter((r) => r.level === "ok").length} ${T("مطمئنة", "on track")}</span></div></div>
+    ${show.length ? `<ul class="ew">${show.slice(0, S.ui.ewAll ? 999 : 15).map((r) => { const st = stu(r.sid); return `<li class="${r.level}"><div><strong>${nm(st)} <small class="muted">${esc(st.cls)}${S.teachers ? " · " + esc(tName(st._teacher)) : ""}</small></strong><span>${r.why.map(esc).join(" · ")}</span></div></li>`; }).join("")}</ul>${show.length > 15 && !S.ui.ewAll ? `<button class="lnk" data-act="ewAll">${T("عرض الكل", "Show all")} (${show.length})</button>` : ""}` : `<p class="note ok">${T("لا توجد طالبة في دائرة الخطر حاليًا.", "No student is at risk right now.")}</p>`}
+    <p class="muted">${T(`المؤشر نفسه الذي تراه المعلمة: الإتقان في آخر اختبار، والمهارات الأقل من ${EW.low}%، والتراجع، والمخالفات خلال ${EW.behDays} يومًا، ومتابعة وليّ الأمر.`, `The same indicator the teacher sees: mastery in the latest test, skills below ${EW.low}%, decline, behaviour entries in the last ${EW.behDays} days, and parent follow-up.`)}</p></section>`;
 }
 function stBehavior() {
   const from = new Date(Date.now() - EW.behDays * 864e5).toISOString().slice(0, 10), rec = S.behavior.filter((b) => b.date >= from);
   const neg = rec.filter(isNeg), pos = rec.filter((b) => !isNeg(b)), by = {};
   neg.forEach((b) => (by[b.sid] = (by[b.sid] || 0) + 1));
-  const types = {}; rec.forEach((b) => { const k = (isNeg(b) ? "− " : "+ ") + (b.type || "أخرى"); types[k] = (types[k] || 0) + 1; });
+  const types = {}; rec.forEach((b) => { const k = (isNeg(b) ? "− " : "+ ") + (b.type || T("أخرى", "Other")); types[k] = (types[k] || 0) + 1; });
   const many = Object.entries(by).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]);
-  return `<section class="card"><h2>السلوك خلال ${EW.behDays} يومًا</h2>
-    <div class="grid4"><div class="tile"><b>${pos.length}</b><span>سلوكًا إيجابيًا</span></div><div class="tile"><b>${neg.length}</b><span>مخالفة</span></div><div class="tile"><b>${many.length}</b><span>طالبة بمخالفتين أو أكثر</span></div></div>
-    ${Object.keys(types).length ? `<h3>الأنواع</h3><div class="scroll"><table class="tbl"><tbody>${Object.entries(types).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<tr><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">لا توجد ملاحظات سلوكية مسجلة في هذه المدة.</p>`}
-    ${many.length ? `<h3>تحتاج متابعة سلوكية</h3><ul class="ew">${many.map(([sid, n]) => { const st = stu(sid); return st ? `<li class="${n >= EW.behMany ? "high" : "mid"}"><div><strong>${nm(st)} <small class="muted">${esc(st.cls)}</small></strong><span>${n} مخالفات</span></div></li>` : ""; }).join("")}</ul>` : ""}</section>`;
+  return `<section class="card"><h2>${T(`السلوك خلال ${EW.behDays} يومًا`, `Behaviour in the last ${EW.behDays} days`)}</h2>
+    <div class="grid4"><div class="tile"><b>${pos.length}</b><span>${T("سلوكًا إيجابيًا", "positive entries")}</span></div><div class="tile"><b>${neg.length}</b><span>${T("مخالفة", "behaviour entries")}</span></div><div class="tile"><b>${many.length}</b><span>${T("طالبة بمخالفتين أو أكثر", "students with two or more")}</span></div></div>
+    ${Object.keys(types).length ? `<h3>${T("الأنواع", "Types")}</h3><div class="scroll"><table class="tbl"><tbody>${Object.entries(types).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<tr><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">${T("لا توجد ملاحظات سلوكية مسجلة في هذه المدة.", "Nothing logged in this period.")}</p>`}
+    ${many.length ? `<h3>${T("تحتاج متابعة سلوكية", "Need behaviour follow-up")}</h3><ul class="ew">${many.map(([sid, n]) => { const st = stu(sid); return st ? `<li class="${n >= EW.behMany ? "high" : "mid"}"><div><strong>${nm(st)} <small class="muted">${esc(st.cls)}</small></strong><span>${n} ${T("مخالفات", "entries")}</span></div></li>` : ""; }).join("")}</ul>` : ""}</section>`;
 }
 function stParents() {
   const t = doneTests()[0], ids = t ? Object.keys(t.results || {}) : [], not = ids.filter((sid) => !((S.acks[sid] || {}).seen || {})[t.id]);
   const canCodes = ["principal", "student_deputy"].includes(staffRole());
-  return `<section class="card"><h2>أولياء الأمور</h2>
-    ${t ? `<div class="grid4"><div class="tile"><b>${ackRate()}%</b><span>اطّلعوا على تقرير ${esc(t.name)}</span></div><div class="tile"><b>${not.length}</b><span>لم يطّلعوا بعد</span></div></div>
-    ${not.length ? `<details class="sheet"><summary>من لم يطّلع وليّ أمرها (${not.length})</summary><ul class="plain">${not.map((sid) => { const st = stu(sid); return st ? `<li>${nm(st)} <small class="muted">${esc(st.cls)}</small></li>` : ""; }).join("")}</ul></details>` : ""}` : `<p class="muted">يظهر هنا اطلاع أولياء الأمور بعد أول تقرير.</p>`}</section>
-  ${canCodes ? `<section class="card"><h2>رموز دخول أولياء الأمور</h2><p>لكل وليّ أمر رمز خاص من 8 أرقام، يدخل به من صفحة المدرسة ويتابع به أكثر من بنت. يُحفظ الرمز مشفّرًا، فلا يظهر إلا مرة واحدة عند إصداره: اطبعيه وسلّميه لوليّ الأمر.</p>
-    <div class="row wrap"><label class="fld">الفصل<select id="pcCls"><option value="">كل الفصول</option>${[...new Set(S.roster.map((x) => x.cls))].map((c) => `<option>${esc(c)}</option>`).join("")}</select></label><button class="btn" data-act="stCodes">إصدار الرموز</button></div></section>` : ""}`;
+  return `<section class="card"><h2>${tabT("parents")}</h2>
+    ${t ? `<div class="grid4"><div class="tile"><b>${ackRate()}%</b><span>${T("اطّلعوا على تقرير", "saw the report of")} ${esc(t.name)}</span></div><div class="tile"><b>${not.length}</b><span>${T("لم يطّلعوا بعد", "have not seen it yet")}</span></div></div>
+    ${not.length ? `<details class="sheet"><summary>${T("من لم يطّلع وليّ أمرها", "Parents who have not seen it")} (${not.length})</summary><ul class="plain">${not.map((sid) => { const st = stu(sid); return st ? `<li>${nm(st)} <small class="muted">${esc(st.cls)}</small></li>` : ""; }).join("")}</ul></details>` : ""}` : `<p class="muted">${T("يظهر هنا اطلاع أولياء الأمور بعد أول تقرير.", "Parents' views appear here after the first report.")}</p>`}</section>
+  ${canCodes ? `<section class="card"><h2>${T("رموز دخول أولياء الأمور", "Parent sign-in codes")}</h2><p>${T("لكل وليّ أمر رمز خاص من 8 أرقام، يدخل به من صفحة المدرسة ويتابع به أكثر من بنت. يُحفظ الرمز مشفّرًا، فلا يظهر إلا مرة واحدة عند إصداره: اطبعيه وسلّميه لوليّ الأمر.", "Each parent gets a personal 8-digit code to sign in from the school page and follow more than one daughter. The code is stored encrypted, so it is shown only once when issued: print it and hand it to the parent.")}</p>
+    <div class="row wrap"><label class="fld">${T("الفصل", "Class")}<select id="pcCls"><option value="">${T("كل الفصول", "All classes")}</option>${[...new Set(S.roster.map((x) => x.cls))].map((c) => `<option>${esc(c)}</option>`).join("")}</select></label><button class="btn" data-act="stCodes">${T("إصدار الرموز", "Issue codes")}</button></div></section>` : ""}`;
 }
 A.stCodes = () => guard(async () => {
   const c = ($("#pcCls") || {}).value || "", list = S.roster.filter((x) => !c || x.cls === c);
   const r = Store.parentCodes ? await Store.parentCodes(list.map((x) => x.id)) : { codes: {} };
   const rows = list.filter((x) => r.codes[x.id]);
-  modal(`<h3>رموز أولياء الأمور${c ? " · " + esc(c) : ""}</h3><p class="muted">تظهر هذه الرموز الآن فقط. اطبعيها وسلّمي كل وليّ أمر رمزه.${Store.demoStaff ? " (رموز تجريبية للعرض)" : ""}</p>
-    <div class="scroll"><table class="tbl" id="pcTbl"><thead><tr><th>الطالبة</th><th>الفصل</th><th>رمز وليّ الأمر</th></tr></thead><tbody>${rows.map((x) => `<tr><td>${nm(x)}</td><td>${esc(x.cls)}</td><td class="num" dir="ltr">${esc(r.codes[x.id])}</td></tr>`).join("")}</tbody></table></div>
-    ${r.missing && r.missing.length ? `<p class="note warn">${r.missing.length} طالبة بلا رقم سري بعد، فلم يصدر لها رمز.</p>` : ""}
-    <div class="row end"><button class="btn ghost" data-act="close">إغلاق</button><button class="btn" data-act="stCodesPrint">طباعة</button></div>`, true);
+  modal(`<h3>${T("رموز أولياء الأمور", "Parent codes")}${c ? " · " + esc(c) : ""}</h3><p class="muted">${T("تظهر هذه الرموز الآن فقط. اطبعيها وسلّمي كل وليّ أمر رمزه.", "These codes are shown only now. Print them and give each parent their code.")}${Store.demoStaff ? T(" (رموز تجريبية للعرض)", " (demo codes)") : ""}</p>
+    <div class="scroll"><table class="tbl" id="pcTbl"><thead><tr><th>${T("الطالبة", "Student")}</th><th>${T("الفصل", "Class")}</th><th>${T("رمز وليّ الأمر", "Parent code")}</th></tr></thead><tbody>${rows.map((x) => `<tr><td>${nm(x)}</td><td>${esc(x.cls)}</td><td class="num" dir="ltr">${esc(r.codes[x.id])}</td></tr>`).join("")}</tbody></table></div>
+    ${r.missing && r.missing.length ? `<p class="note warn">${T(`${r.missing.length} طالبة بلا رقم سري بعد، فلم يصدر لها رمز.`, `${r.missing.length} students have no PIN yet, so no code was issued for them.`)}</p>` : ""}
+    <div class="row end"><button class="btn ghost" data-act="close">${T("إغلاق", "Close")}</button><button class="btn" data-act="stCodesPrint">${T("طباعة", "Print")}</button></div>`, true);
 });
 A.stCodesPrint = () => { const t = $("#pcTbl"); if (!t) return; const w = window.open("", "_blank"); if (!w) return toast("اسمحي بفتح النوافذ للطباعة."); w.document.write(`<!doctype html><html dir="rtl" lang="ar"><meta charset="utf-8"><title>رموز أولياء الأمور</title><style>body{font-family:Tahoma,Arial;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:8px;text-align:right}</style><h2>${esc(S.settings.school)} · رموز دخول أولياء الأمور إلى منصة إتقان</h2>${t.outerHTML.replace(/class="pii"/g, "")}</html>`); w.document.close(); w.print(); };
 
@@ -2820,20 +2859,20 @@ function stStaff() {
     S.membersBusy = true;
     (Store.schoolMembers ? Store.schoolMembers() : Promise.resolve({ members: [] })).then((r) => { S.members = r.members || []; }).catch(() => { S.members = []; }).finally(() => { S.membersBusy = false; render(); });
   }
-  const RL = { teacher: "معلمة", principal: "مديرة", academic_deputy: "وكيلة تعليمية", student_deputy: "وكيلة طلابية", counselor: "موجهة طلابية" };
-  const ST = { active: ["منضمة", "ok"], invited: ["دُعيت ولم تقبل بعد", ""], requested: ["تطلب الانضمام", "warn"] };
+  const RL = { teacher: T("معلمة", "Teacher"), principal: T("مديرة", "Principal"), academic_deputy: T("وكيلة تعليمية", "Academic deputy"), student_deputy: T("وكيلة طلابية", "Student affairs deputy"), counselor: T("موجهة طلابية", "Counsellor") };
+  const ST = { active: [T("منضمة", "Joined"), "ok"], invited: [T("دُعيت ولم تقبل بعد", "Invited, not accepted yet"), ""], requested: [T("تطلب الانضمام", "Asks to join"), "warn"] };
   const m = S.members || [];
-  return `<section class="card"><h2>منسوبات المدرسة</h2>
-    ${!S.members ? `<p class="muted">جارٍ التحميل…</p>` : m.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>الاسم</th><th>الصفة</th><th>المادة</th><th>الحالة</th><th></th></tr></thead><tbody>${m.map((x) => `<tr><td data-keep>${esc(x.name || x.email || "")}</td><td>${RL[x.role] || x.role}</td><td>${esc(x.subject || "")}</td><td><span class="chip ${ST[x.status] ? ST[x.status][1] : ""}">${ST[x.status] ? ST[x.status][0] : esc(x.status)}</span></td><td>${x.status === "requested" ? `<button class="btn sm" data-act="stDecide" data-m="${esc(x.id)}" data-a="approve">قبول</button>` : ""}${x.role !== "principal" ? `<button class="lnk danger" data-act="stDecide" data-m="${esc(x.id)}" data-a="remove">إزالة</button>` : ""}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">لا يوجد أعضاء بعد.</p>`}
-    <p class="muted">المعلمة التي تنضم تنتقل بياناتها إلى المدرسة بموافقتها. والمعلمة التي تُزال تبقى لها بياناتها كاملة، ولا تراها المدرسة بعد ذلك.</p></section>
-  <section class="card"><h2>دعوة عضو جديد</h2><p>تصلها رسالة على بريدها، تضع منها كلمة المرور ثم تدخل من صفحة المدرسة.</p>
-    <div class="row wrap"><label class="fld grow">البريد الإلكتروني<input id="invE" type="email" dir="ltr" autocomplete="off"></label><label class="fld">الصفة<select id="invR"><option value="teacher">معلمة</option><option value="academic_deputy">وكيلة تعليمية</option><option value="student_deputy">وكيلة طلابية</option><option value="counselor">موجهة طلابية</option></select></label><button class="btn" data-act="stInvite">إرسال الدعوة</button></div></section>`;
+  return `<section class="card"><h2>${tabT("staff")}</h2>
+    ${!S.members ? `<p class="muted">${T("جارٍ التحميل…", "Loading…")}</p>` : m.length ? `<div class="scroll"><table class="tbl"><thead><tr><th>${T("الاسم", "Name")}</th><th>${T("الصفة", "Role")}</th><th>${T("المادة", "Subject")}</th><th>${T("الحالة", "Status")}</th><th></th></tr></thead><tbody>${m.map((x) => `<tr><td data-keep>${esc(x.name || x.email || "")}</td><td>${RL[x.role] || x.role}</td><td>${esc(x.subject || "")}</td><td><span class="chip ${ST[x.status] ? ST[x.status][1] : ""}">${ST[x.status] ? ST[x.status][0] : esc(x.status)}</span></td><td>${x.status === "requested" ? `<button class="btn sm" data-act="stDecide" data-m="${esc(x.id)}" data-a="approve">${T("قبول", "Approve")}</button>` : ""}${x.role !== "principal" ? `<button class="lnk danger" data-act="stDecide" data-m="${esc(x.id)}" data-a="remove">${T("إزالة", "Remove")}</button>` : ""}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">${T("لا يوجد أعضاء بعد.", "No members yet.")}</p>`}
+    <p class="muted">${T("المعلمة التي تنضم تنتقل بياناتها إلى المدرسة بموافقتها. والمعلمة التي تُزال تبقى لها بياناتها كاملة، ولا تراها المدرسة بعد ذلك.", "A teacher who joins brings her data into the school with her consent. A teacher who is removed keeps all her data, and the school no longer sees it.")}</p></section>
+  <section class="card"><h2>${T("دعوة عضو جديد", "Invite a new member")}</h2><p>${T("تصلها رسالة على بريدها، تضع منها كلمة المرور ثم تدخل من صفحة المدرسة.", "She receives an e-mail, sets her password from it, then signs in from the school page.")}</p>
+    <div class="row wrap"><label class="fld grow">${T("البريد الإلكتروني", "E-mail")}<input id="invE" type="email" dir="ltr" autocomplete="off"></label><label class="fld">${T("الصفة", "Role")}<select id="invR">${["teacher", "academic_deputy", "student_deputy", "counselor"].map((k) => `<option value="${k}">${RL[k]}</option>`).join("")}</select></label><button class="btn" data-act="stInvite">${T("إرسال الدعوة", "Send invitation")}</button></div></section>`;
 }
 A.stInvite = () => guard(async () => {
-  const e = ($("#invE").value || "").trim(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw { message: "اكتبي بريدًا إلكترونيًا صحيحًا." };
+  const e = ($("#invE").value || "").trim(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw { message: T("اكتبي بريدًا إلكترونيًا صحيحًا.", "Enter a valid e-mail address.") };
   await Store.schoolInvite(e, $("#invR").value); S.members = null; render();
-}, "أُرسلت الدعوة.");
-A.stDecide = (el) => guard(async () => { await Store.schoolDecide(el.dataset.m, el.dataset.a); S.members = null; render(); }, "تم.");
+}, T("أُرسلت الدعوة.", "Invitation sent."));
+A.stDecide = (el) => guard(async () => { await Store.schoolDecide(el.dataset.m, el.dataset.a); S.members = null; render(); }, T("تم.", "Done."));
 
 /* ===== Attaching a whole class's scanned papers from one file (added in the new platform) =====
  * The teacher uploads one PDF (or several photos). Each page is shown to the AI, which reads only the student's
