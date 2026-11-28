@@ -32,7 +32,7 @@ export async function GET() {
     ]);
     const st = rowsToState({ classes, students, skills: [], tests, test_results, improvement_rounds, improvement_items });
     const main = Object.values(st.tests).sort((a: any, b: any) => Object.keys(b.results).length - Object.keys(a.results).length)[0] as any;
-    const settings = { school: school.name };
+    const settings = {}; // the platform page shows no school name (a subscribed school has its own page)
     if (!main || Object.keys(main.results).length < 10) return json({ settings, counts });
     const s = impactSummary({ skills: [], roster: st.roster, imps: Object.values(st.imps) as any[] }, main);
     return json({ settings, counts, ...s });

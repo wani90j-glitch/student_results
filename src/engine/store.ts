@@ -302,6 +302,7 @@ export function createStore() {
     },
 
     /* ---- school staff ---- */
+    schoolPage: (code: string) => api("/api/schools/" + encodeURIComponent(code)),
     parentCodes: (ids: string[]) => api("/api/parent-codes", { studentIds: ids }),
     schoolMembers: () => api("/api/school/members"),
     schoolInvite: (email: string, r: string) => api("/api/school/invite", { email, role: r }),

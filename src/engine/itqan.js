@@ -2624,7 +2624,7 @@ renderLanding = function () {
     </header>
     <section class="mx-hero">${MX_WAVES}
       <div class="mx-hero-in">
-        ${s.school ? `<span class="mx-chip">${s.logo ? `<img src="${esc(s.logo)}" alt="">` : ""}<span data-keep>${esc(s.school)}</span></span>` : ""}
+        ${S.schoolPage ? `<span class="mx-chip">${S.schoolPage.logo ? `<img src="${esc(S.schoolPage.logo)}" alt="">` : ""}<span data-keep>${esc(S.schoolPage.name)}</span></span>` : ""}
         <h1>التقويم لا يكتمل عند الدرجة… بل عند الإتقان</h1>
         <p>إتقان لا تعطي درجة فقط… بل تحوّلها إلى <b>خريطة طريق نحو الإتقان</b>.<br><span>نقيس • نحلّل • نعالج • نعيد التقويم</span></p>
         <button class="mx-btn" data-act="mxGo" data-to="mx-roles">تسجيل الدخول</button>
@@ -2679,6 +2679,13 @@ renderLanding = function () {
   </div>`;
   document.body.classList.remove("priv"); applyLang(app); mxCount();
 };
+/* A subscribed school (school plan) has its own page, itqanloop.com/s/<code>, with its name and logo.
+ * The platform's main page and the pages of schools without the plan show no school name. */
+const SP_CODE = (location.pathname.match(/^\/s\/([a-z0-9_-]{2,40})\/?$/i) || [])[1];
+if (SP_CODE && Store.schoolPage) Store.schoolPage(SP_CODE).then((r) => {
+  if (r && r.moved) { location.replace("/s/" + r.moved); return; }
+  if (r && r.school && r.school.plan === "school") { S.schoolPage = r.school; if (S.loaded && !S.role) render(); }
+}).catch(() => {});
 /** The figures count up once when they come into view (skipped when the device asks for reduced motion). */
 function mxCount() {
   const els = [...document.querySelectorAll(".mx-fig b[data-n]")];
