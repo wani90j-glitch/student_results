@@ -257,3 +257,6 @@ select{max-width:100%;min-width:0;text-overflow:ellipsis}
 .dgrid>*{min-width:0}
 @media(max-width:700px){.dgrid{grid-template-columns:1fr!important}}
 @media(max-width:560px){.btn{white-space:normal;text-align:center}.hd{flex-wrap:wrap}}
+/* the loop slogan under the landing title */
+.loopline{display:flex;flex-direction:column;gap:2px;margin:4px 0 14px;color:var(--brand2)}
+.loopline b{font-weight:600;font-size:1.02rem}.loopline span{color:var(--muted);font-size:.92rem;letter-spacing:.02em}

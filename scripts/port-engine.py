@@ -87,6 +87,10 @@ sub("""        ${Store.canTeach ? `<button class="door" data-act="asTeacher">"""
 sub("""          ${s.demo && S.roster[0] ? `<small class="muted">للتجربة: ${esc(S.roster[0].nid)}${s.pinOn && S.roster[0].pin ? " · الرمز " + esc(S.roster[0].pin) : ""}</small>` : ""}<small id="loginErr" class="err"></small></form>""",
     """<small id="loginErr" class="err"></small></form>""")
 
+# 4b. the platform's name and slogan (domain itqanloop.com): the loop from diagnosis to mastery
+sub("""<p class="lead">التقويم لا يكتمل عند الدرجة… بل عند الإتقان</p>""",
+    """<p class="lead">التقويم لا يكتمل عند الدرجة… بل عند الإتقان</p><p class="loopline"><b>حلقة تبدأ بالتشخيص… ولا تنتهي إلا بالإتقان</b><span>نقيس • نحلّل • نعالج • نعيد التقويم</span></p>""")
+
 # 5. sign-in: teacher by e-mail + password (+ optional authenticator code); student by her PIN through the server
 cut(r"^async function hashPw\(pw, salt\)", r"^A\.clearDemo = ", """A.asTeacher = () => modal(`<h3>دخول المعلمة</h3><form id="tpForm" data-mode="enter"><label class="fld">البريد الإلكتروني<input id="tpE" type="email" autocomplete="username" dir="ltr" required></label><label class="fld">كلمة المرور<input id="tp1" type="password" autocomplete="current-password" required></label><small id="tpErr" class="err"></small><div class="row end"><button class="lnk" type="button" data-act="tpForgot">نسيت كلمة المرور</button><button class="btn" type="submit">دخول</button></div></form>`);
 A.tpForgot = () => guard(async () => { const e = ($("#tpE") || {}).value || ""; if (!e.trim()) throw { message: "اكتبي بريدك الإلكتروني أولًا." }; await Store.resetPassword(e.trim()); }, "أُرسل رابط تعيين كلمة المرور إلى بريدك.");

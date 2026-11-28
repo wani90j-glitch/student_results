@@ -840,7 +840,7 @@ function renderLanding() {
   app.innerHTML = `<div class="landing">
     <div class="ltop"><span data-keep>${esc(s.school)}</span><button class="btn ghost sm" data-act="lang">${S.lang === "en" ? "العربية" : "English"}</button></div>
     <div class="lgrid">
-      <div class="hero"><h1>إتقان</h1><p class="lead">التقويم لا يكتمل عند الدرجة… بل عند الإتقان</p>
+      <div class="hero"><h1>إتقان</h1><p class="lead">التقويم لا يكتمل عند الدرجة… بل عند الإتقان</p><p class="loopline"><b>حلقة تبدأ بالتشخيص… ولا تنتهي إلا بالإتقان</b><span>نقيس • نحلّل • نعالج • نعيد التقويم</span></p>
         <div class="hook"><b>طالبتان… الدرجة نفسها 14 من 20… والفجوة مختلفة.</b><span>الدرجة الكلية تُخفي المهارة الناقصة، فيُعاد الشرح للجميع ويضيع الجهد.</span></div>
         <ol class="hsteps"><li><b>يربط</b><span>كل سؤال بمهارته ومستواه المعرفي</span></li><li><b>يشخّص</b><span>فجوة كل طالبة عن الإتقان</span></li><li><b>يقرّر</b><span>علاج أو دعم أو إثراء</span></li><li><b>يعيد التقويم</b><span>في مهاراتها الناقصة وحدها</span></li></ol>
         ${hstats()}</div>
