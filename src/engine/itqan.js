@@ -3087,7 +3087,7 @@ renderLanding = function () {
       <div class="mx-hero-in">
         ${S.schoolPage ? `<span class="mx-chip">${S.schoolPage.logo ? `<img src="${esc(S.schoolPage.logo)}" alt="">` : ""}<span data-keep>${esc(S.schoolPage.name)}</span></span>` : ""}
         <h1>${T("التقويم لا يكتمل عند الدرجة… بل عند الإتقان", "Assessment isn't complete at the grade… only at mastery")}</h1>
-        <p>${T("إتقان لا تعطي درجة فقط… بل تحوّلها إلى <b>خريطة طريق نحو الإتقان</b>.", "Itqan doesn't just give a grade… it turns it into a <b>roadmap to mastery</b>.")}<br><span>${T("نقيس • نحلّل • نعالج • نعيد التقويم", "Measure • Analyse • Treat • Re-assess")}</span></p>
+        <p>${T("إتقان لا تعطي درجة فقط… بل تحوّلها إلى <b>خارطة طريق نحو الإتقان</b>.", "Itqan doesn't just give a grade… it turns it into a <b>roadmap to mastery</b>.")}<br><span>${T("نقيس • نحلّل • نعالج • نعيد التقويم", "Measure • Analyse • Treat • Re-assess")}</span></p>
         <button class="mx-btn" data-act="mxGo" data-to="mx-roles">${T("تسجيل الدخول", "Sign in")}</button>
       </div>
       <div class="mx-hero-art">${MX_ART()}</div>
@@ -3097,7 +3097,7 @@ renderLanding = function () {
       <div class="mx-vs">
         <div class="mx-vs-a"><small>${T("المعتاد", "Usually")}</small><b>${T("14 من 20", "14 / 20")}</b><span>${T("درجة تُسجَّل… ويتوقف الأمر عندها.", "A grade is recorded… and that's where it ends.")}</span></div>
         <div class="mx-vs-arrow" aria-hidden="true">${T("←", "→")}</div>
-        <div class="mx-vs-b"><small>${T("في إتقان", "In Itqan")}</small><b>${T("خريطة طريق", "A roadmap")}</b><span>${T("ما أتقنته الطالبة، وما ينقصها من مهارات، وفي أي مستوى معرفي: المعرفة أو التطبيق أو الاستدلال، ثم علاج يُعاد بعده التقويم في مهاراتها الناقصة وحدها.", "What the student has mastered, which skills she is missing and at which cognitive level (knowing, applying or reasoning), then treatment followed by re-assessment in her missing skills only.")}</span></div>
+        <div class="mx-vs-b"><small>${T("في إتقان", "In Itqan")}</small><b>${T("خارطة طريق", "A roadmap")}</b><span>${T("ما أتقنته الطالبة، وما ينقصها من مهارات، وفي أي مستوى معرفي: المعرفة أو التطبيق أو الاستدلال، ثم علاج يُعاد بعده التقويم في مهاراتها الناقصة وحدها.", "What the student has mastered, which skills she is missing and at which cognitive level (knowing, applying or reasoning), then treatment followed by re-assessment in her missing skills only.")}</span></div>
       </div>
       <div class="mx-pillars">
         <div><b>${T("تشخيص لا تصنيف", "Diagnosis, not ranking")}</b><span>${T("الفجوة عن الإتقان لكل طالبة ولكل مهارة، لا ترتيبها بين زميلاتها.", "Each student's gap to mastery in each skill, not her rank among her classmates.")}</span></div>
